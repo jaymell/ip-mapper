@@ -1,31 +1,31 @@
-queue()
-    .defer(d3.json, "/json")
-    .defer(d3.json, "/geojson/countries.geojson")
-    .await(makeGraphs);
+var q = d3.queue();
+    q.defer(d3.json, "/json")
+    q.defer(d3.json, "/geojson/countries.geojson")
+    q.await(makeGraphs);
 
 function makeGraphs(error, sitesJson, worldJson) {
 
     var topSites = sitesJson['Result'];
     var worldChart = dc.geoChoroplethChart("#world-chart")
-
+//    var timeChart = 
     // crossfilter
     var ndx = crossfilter(topSites);
 
     // dimensions
     var ipDim = ndx.dimension(function(d) { 
-		if ( (typeof d["x-forwarded-for"] !== 'undefined') or (typeof d["x-forwarded-for"] !== 'null') )
+		if ( (typeof d["x-forwarded-for"] !== 'undefined') || (typeof d["x-forwarded-for"] !== null) )
 			return d["x-forwarded-for"];
 		if (typeof d["remoteAddress"] !== 'undefined' ) 
 			return d["remoteAddress"].replace(/^.*:/, '')
-		}});
+    });
 
-	var dateDim = ndx.dimension(function(d) {
-		if (typeof d['date'] !== 'undefined')
-			return d['date'];
-	}
+    var dateDim = ndx.dimension(function(d) {
+        if (typeof d['date'] !== 'undefined')
+	    return d['date'];
+    });
 
     // metrics
-    var totalIpsByCountry = countryDim.group().reduceCount(function(d) {
+    var totalIpsByCountry = ipDim.group().reduceCount(function(d) {
         if (typeof d["ips"][0] !== 'undefined' ) {
             if (typeof d["ips"][0]["country"] !== 'undefined' ) {
                 return d["ips"][0]["country"];
@@ -63,6 +63,7 @@ function makeGraphs(error, sitesJson, worldJson) {
     var minDate = dateDim.bottom(1)[0]["date"];
     var maxDate = dateDim.top(1)[0]["date"];
 
+/*
     timeChart
         .width(600)
         .height(160)
@@ -74,11 +75,11 @@ function makeGraphs(error, sitesJson, worldJson) {
         .elasticY(true)
         .xAxisLabel("Year")
         .yAxis().ticks(4);
-
+*/
     worldChart
         .height(height)
         .width(width)
-        .dimension(countryDim)
+        .dimension(ipDim)
         .group(totalIpsByCountry)
         .colors(["#E2F2FF", "#C4E4FF", "#9ED2FF", "#81C5FF", "#6BBAFF", "#51AEFF", "#36A2FF", "#1E96FF", "#0089FF", "#0061B5"])
         //.colorDomain([0, max_country])
