@@ -1,5 +1,5 @@
 {
-	"DataURL": "mongodb://localhost/logger",
-	"CollectionName": "logs",
-	"ListenAddress": "0.0.0.0:8080"
+	"ListenAddress": "0.0.0.0:8080",
+		"DataURL": "mongodb://localhost/logger",
+		"CollectionName": "logs"
 }

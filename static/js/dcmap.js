@@ -1,67 +1,76 @@
 var q = d3.queue();
-    q.defer(d3.json, "/json")
-    q.defer(d3.json, "/geojson/countries.geojson")
-    q.await(makeGraphs);
+  q.defer(d3.json, "/json")
+  q.defer(d3.json, "/geojson/countries.geojson")
+  q.await(makeGraphs);
 
 function makeGraphs(error, sitesJson, worldJson) {
 
-    var topSites = sitesJson['Result'];
-    var worldChart = dc.geoChoroplethChart("#world-chart")
-//    var timeChart = 
-    // crossfilter
-    var ndx = crossfilter(topSites);
+  var topSites = sitesJson['Result'];
+  var worldChart = dc.geoChoroplethChart("#world-chart")
 
-    // dimensions
-    var ipDim = ndx.dimension(function(d) { 
-		if ( (typeof d["x-forwarded-for"] !== 'undefined') || (typeof d["x-forwarded-for"] !== null) )
-			return d["x-forwarded-for"];
-		if (typeof d["remoteAddress"] !== 'undefined' ) 
-			return d["remoteAddress"].replace(/^.*:/, '')
-    });
+  // var timeChart = 
 
-    var dateDim = ndx.dimension(function(d) {
-        if (typeof d['date'] !== 'undefined')
-	    return d['date'];
-    });
+  // crossfilter
+  var ndx = crossfilter(topSites);
 
-    // metrics
-    var totalIpsByCountry = ipDim.group().reduceCount(function(d) {
-        if (typeof d["ips"][0] !== 'undefined' ) {
-            if (typeof d["ips"][0]["country"] !== 'undefined' ) {
-                return d["ips"][0]["country"];
-            }
-        }});
-
-    var max_country = totalIpsByCountry.top(1)[0].value;
-
-    var height = 800;
-    var width = 1600;
-
-    var projection = d3.geo.equirectangular()
-                        .scale(200)
-                        .center([-97,33]);
-
-    function zoomed() {
-        projection 
-        .translate(d3.event.translate)
-        .scale(d3.event.scale);
-        worldChart.render();
+  // dimensions
+  var ipDim = ndx.dimension(function(d) { 
+    //if ( (typeof d["x-forwarded-for"] !== undefined) || (typeof d["x-forwarded-for"] !== null) )
+    if ( "x-forwarded-for" in d ) {
+      console.log("x forwarded: ", d["x-forwarded-for"]);
+      return d["x-forwarded-for"];
     }
+    //if (typeof d["remoteAddress"] !== undefined ) 
+    if ( "remoteAddress" in d ) {
+      console.log("remoteAddress: ", d["remoteAddress"].replace(/^.*:/, ''));
+      return d["remoteAddress"].replace(/^.*:/, '')
+    }
+    console.log("nothing found!");
+  });
 
-    var zoom = d3.behavior.zoom()
-        .translate(projection.translate())
-        //.scale(projection.scale())
-        .scale(1 << 8) // not sure why, but 8 seems like a good number
-        //.scaleExtent([height/2, 8 * height]) // defines the max amount you can zoom
-        .on("zoom", zoomed);
 
-    var svg = d3.select("#world-chart")
-        .attr("width", width)
-        .attr("height", height)
-        .call(zoom);
+  var dateDim = ndx.dimension(function(d) {
+    if (typeof d['date'] !== 'undefined')
+      return d['date'];
+  });
 
-    var minDate = dateDim.bottom(1)[0]["date"];
-    var maxDate = dateDim.top(1)[0]["date"];
+  // metrics
+  var totalIpsByCountry = ipDim.group().reduceCount(function(d) {
+    if (typeof d["ips"][0] !== 'undefined' ) {
+      if (typeof d["ips"][0]["country"] !== 'undefined' )
+        return d["ips"][0]["country"];
+  }});
+
+  var max_country = totalIpsByCountry.top(1)[0].value;
+
+  var height = 800;
+  var width = 1600;
+
+  var projection = d3.geo.equirectangular()
+                     .scale(200)
+                     .center([-97,33]);
+
+  function zoomed() {
+    projection 
+      .translate(d3.event.translate)
+      .scale(d3.event.scale);
+    worldChart.render();
+  }
+
+  var zoom = d3.behavior.zoom()
+               .translate(projection.translate())
+               //.scale(projection.scale())
+               .scale(1 << 8) // not sure why, but 8 seems like a good number
+               //.scaleExtent([height/2, 8 * height]) // defines the max amount you can zoom
+               .on("zoom", zoomed);
+
+  var svg = d3.select("#world-chart")
+              .attr("width", width)
+              .attr("height", height)
+              .call(zoom);
+
+  var minDate = dateDim.bottom(1)[0]["date"];
+  var maxDate = dateDim.top(1)[0]["date"];
 
 /*
     timeChart
@@ -97,6 +106,6 @@ function makeGraphs(error, sitesJson, worldJson) {
                  + "Total Sites: " + total + " Sites";
         })
 
-dc.renderAll();
+  dc.renderAll();
 
 }

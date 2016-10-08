@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/jaymell/go-serve/daemon"
+	"./daemon"
 	"os"
 )
 
