@@ -36,6 +36,7 @@ type DaemonConfig struct {
 	DataURL        string `json: "DataURL"`
 	ListenAddress  string `json: "ListenAddress"`
 	CollectionName string `json: "CollectionName"`
+	IPGeolocator map[string]string `json: "IPGeolocator"`
 }
 
 type Daemon struct {

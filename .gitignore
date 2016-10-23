@@ -1,1 +1,3 @@
 /static/lib/*
+config.json
+*.swp

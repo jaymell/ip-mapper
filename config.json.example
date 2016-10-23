@@ -1,0 +1,13 @@
+{
+	"ListenAddress": "0.0.0.0:8080",
+	"DataURL": "mongodb://localhost/<DB NAME>",
+	"CollectionName": "<MONGO COLLECTION NAME>",
+    "IPGeolocator": {
+        "Vendor": "MaxMind",
+        "MaxMindUserID": "<User ID>",
+        "MaxMindLicenseKey": "<License Key>",
+        "CacheURL": "mongodb://localhost/iplocator",
+        "CollectionName": "iplocator"
+    }
+
+}

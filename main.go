@@ -17,6 +17,7 @@ func run() error {
 }
 
 func main() {
+	fmt.Println("Starting server... ")
 	err := run()
 	if err != nil {
 		fmt.Println("failed: ", err)
