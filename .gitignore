@@ -1,3 +1,4 @@
 /static/lib/*
-config.json
+config.api.json
+config.daemon.json
 *.swp

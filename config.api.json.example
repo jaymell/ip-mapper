@@ -1,0 +1,12 @@
+{
+    "DataURL": "mongodb://localhost/logger",
+    "CollectionName": "logs",
+    "IPGeolocator": {
+        "Vendor": "MaxMind",
+        "MaxMindUserID": "<ID>",
+        "MaxMindLicenseKey": "<Key>",
+        "CacheURL": "mongodb://localhost/ipgeolocator",
+        "CollectionName": "ipgeolocator"
+    }
+}
+
