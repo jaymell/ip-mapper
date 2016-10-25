@@ -26,6 +26,56 @@ type APIConfig struct {
 type API struct {
 	Config *APIConfig
 	routes []*daemon.Command
+	ipGeolocator IPGeolocator
+}
+
+type ipLocation struct {
+	Latitude float64 `json: "latitude"`
+	Longitude float64 `json: "longitude"`
+	CountryCode string `json: country_iso"`
+}
+
+type IPGeolocator interface {
+	IPLocation() ipLocation
+}
+
+type MaxMindIPGeolocator struct {
+	api *geoip2.Api
+}
+
+func newMaxMind(userID string, licenseKey string) (*MaxMindIPGeolocator, error) {
+	gl := &MaxMindIPGeolocator{}
+	// can successful creds be validated?
+	gl.api := geoip2.New(userID, licenseKey)
+	return gl, nil
+}
+
+func (gl *MaxMindIPGeolocator) ipLocation(ip string) (*geoip2.Response, error) {
+	// FIXME: context?
+	resp, err := gl.Insights(nil, ip)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get response from MaxMind")
+	}
+
+	// TODO: write response data to mongo cache:
+
+}
+
+func (gl *MaxMindIPGeolocator) IPLocation(ip string) (ipLocation, error) {
+	resp, err := gl.IPLocation(ip)
+    if err != nil {
+        return nil, err
+    }
+
+	// convert to vendor-generic type for returnage:
+	location := ipLocation{
+		Latitude: resp.Location.Latitude,
+		Longitude: resp.Location.Longitude,
+		CountryCode: resp.Country.IsoCode,
+	}
+
+	return &location, nil
+
 }
 
 func (api *API) Routes() []*daemon.Command {
@@ -50,15 +100,41 @@ func (api *API) loadConfig(f *os.File) error {
     return nil
 }
 
+func (api *API) loadIPGeolocator() error {
+
+    geolocator := api.Config.IPGeolocator["Vendor"]
+    switch geoLocator {
+    case "MaxMind":
+        maxMindUserID := api.Config.IPGeolocator["MaxMindUserID"]
+        maxMindLicenseKey := api.Config.IPGeolocator["MaxMindLicenseKey"]
+		maxMindIPGeolocator, err := newMaxMind(maxMindUserID, maxMindLicenseKey)
+		if err != nil {
+			return err
+		}
+		api.ipGeolocator = maxMindIPGeolocator
+		return nil
+    default:
+		return fmt.Errorf("No useable ip geolocation vendor specified")
+    }
+}
+
 func New(f *os.File) (*API, error) {
 
 	api := &API{}
 
+	// load config
     err := api.loadConfig(f)
     if err != nil {
         return nil, err
     }
 
+	// initialize geolocator
+	err := api.loadIPGeolocator()
+    if err != nil {
+        return nil, err
+    }
+
+	// connect routes with their handlers
 	var (
 		jsonCmd = &daemon.Command{
 			Path: "/json",
@@ -66,7 +142,7 @@ func New(f *os.File) (*API, error) {
 		}
 		ipLocateCmd = &daemon.Command{
 			Path: "/iplocate",
-			GET:  api.getIpLocation,
+			GET:  api.getIPLocation,
 		}
 	)
 
@@ -131,30 +207,12 @@ func getMongoData(URL string, col string) (interface{}, error) {
 	return results, nil
 }
 
-//func getGeoIP2Response(ip string) (MaxMindResult, error) {
+func (api *API) getIPLocation(c *daemon.Command, r *http.Request) daemon.Response {
 
-//}
+	// TODO: get ip from query param and probably sanity-check it
+	// api.geolocator(
 
-func (api *API) getIpLocation(c *daemon.Command, r *http.Request) daemon.Response {
-	// do switch on a config parameter
-	// and based on that either call maxmind or
-	// some other service for geolocating
+	// handle error responses properly
 
-	geoLocator := api.Config.IPGeolocator["Vendor"]
-	switch geoLocator {
-	case "MaxMind":
-		maxMindUserID := api.Config.IPGeolocator["MaxMindUserID"]
-		maxMindLicenseKey := api.Config.IPGeolocator["MaxMindLicenseKey"]
-		fmt.Println(maxMindUserID, maxMindLicenseKey)
-        return &daemon.Resp{
-            Status: http.StatusNoContent,
-            Result: nil,
-        }
-
-	default:
-        return &daemon.Resp{
-            Status: http.StatusInternalServerError,
-            Result: nil,
-        }
-	}
+	// return ipLocation
 }
