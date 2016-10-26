@@ -211,14 +211,13 @@ func getMongoData(URL string, col string) (interface{}, error) {
 
 func (api *API) getIPLocation(c *daemon.Command, r *http.Request) daemon.Response {
 
-	ipArray, present := r.URL.Query()["ip"]
-	if ! present {
+	ip := r.URL.Query().Get("ip")
+	if ip == "" {
         return &daemon.Resp{
             Status: http.StatusBadRequest,
             Result: nil,
         }
 	}
-	ip := ipArray[0]
 
 	// validate an ip address was actually passed:
 	validIP := net.ParseIP(ip)
