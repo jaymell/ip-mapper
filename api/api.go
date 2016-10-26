@@ -25,7 +25,7 @@ type APIConfig struct {
 
 // stores persistent stuff needed for API, e.g., geolocation object, db handle
 type API struct {
-	Config *APIConfig
+	config *APIConfig
 	routes []*daemon.Command
 	ipGeolocator IPGeolocator
 }
@@ -64,6 +64,10 @@ func (gl *MaxMindIPGeolocator) ipLocation(ip string) (*geoip2.Response, error) {
 }
 
 func (gl *MaxMindIPGeolocator) IPLocation(ip string) (*IPLocation, error) {
+
+	// TODO: check IP cache before calling the 
+	// api
+
 	resp, err := gl.ipLocation(ip)
     if err != nil {
         return nil, err
@@ -97,18 +101,18 @@ func (api *API) loadConfig(f *os.File) error {
         return fmt.Errorf("unable to decode json: ", err)
     }
 
-    api.Config = &config
+    api.config = &config
 
     return nil
 }
 
 func (api *API) loadIPGeolocator() error {
 
-    geolocator := api.Config.IPGeolocator["Vendor"]
+    geolocator := api.config.IPGeolocator["Vendor"]
     switch geolocator {
     case "MaxMind":
-        maxMindUserID := api.Config.IPGeolocator["MaxMindUserID"]
-        maxMindLicenseKey := api.Config.IPGeolocator["MaxMindLicenseKey"]
+        maxMindUserID := api.config.IPGeolocator["MaxMindUserID"]
+        maxMindLicenseKey := api.config.IPGeolocator["MaxMindLicenseKey"]
 		maxMindIPGeolocator, err := newMaxMind(maxMindUserID, maxMindLicenseKey)
 		if err != nil {
 			return err
@@ -176,13 +180,13 @@ func (api *API) getJson(c *daemon.Command, r *http.Request) daemon.Response {
 }
 
 func (api *API) getData() (interface{}, error) {
-	URL, err := url.Parse(api.Config.DataURL)
+	URL, err := url.Parse(api.config.DataURL)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse url from config: ", err)
 	}
 	switch URL.Scheme {
 	case "mongodb":
-		return getMongoData(api.Config.DataURL, api.Config.CollectionName)
+		return getMongoData(api.config.DataURL, api.config.CollectionName)
 	case "http":
 		return nil, fmt.Errorf("Not implemented yet")
 	default:
@@ -207,6 +211,10 @@ func getMongoData(URL string, col string) (interface{}, error) {
 	c.Find(nil).All(&results)
 	// FIXME -- don't always return nil for err, probably:
 	return results, nil
+}
+
+func putMongoData(URL string, col string) error {
+	return nil
 }
 
 func (api *API) getIPLocation(c *daemon.Command, r *http.Request) daemon.Response {
