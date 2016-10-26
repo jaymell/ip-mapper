@@ -3,13 +3,14 @@ package api
 import (
     "encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"time"
 
 	"github.com/jaymell/go-serve/daemon"
-//	"github.com/savaki/geoip2"
+	"github.com/savaki/geoip2"
 	"gopkg.in/mgo.v2"
 )
 
@@ -29,14 +30,14 @@ type API struct {
 	ipGeolocator IPGeolocator
 }
 
-type ipLocation struct {
+type IPLocation struct {
 	Latitude float64 `json: "latitude"`
 	Longitude float64 `json: "longitude"`
 	CountryCode string `json: country_iso"`
 }
 
 type IPGeolocator interface {
-	IPLocation() ipLocation
+	IPLocation(ip string) (*IPLocation, error)
 }
 
 type MaxMindIPGeolocator struct {
@@ -46,29 +47,30 @@ type MaxMindIPGeolocator struct {
 func newMaxMind(userID string, licenseKey string) (*MaxMindIPGeolocator, error) {
 	gl := &MaxMindIPGeolocator{}
 	// can successful creds be validated?
-	gl.api := geoip2.New(userID, licenseKey)
+	gl.api = geoip2.New(userID, licenseKey)
 	return gl, nil
 }
 
 func (gl *MaxMindIPGeolocator) ipLocation(ip string) (*geoip2.Response, error) {
 	// FIXME: context?
-	resp, err := gl.Insights(nil, ip)
+	resp, err := gl.api.Insights(nil, ip)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get response from MaxMind")
 	}
 
 	// TODO: write response data to mongo cache:
 
+	return &resp, nil
 }
 
-func (gl *MaxMindIPGeolocator) IPLocation(ip string) (ipLocation, error) {
-	resp, err := gl.IPLocation(ip)
+func (gl *MaxMindIPGeolocator) IPLocation(ip string) (*IPLocation, error) {
+	resp, err := gl.ipLocation(ip)
     if err != nil {
         return nil, err
     }
 
 	// convert to vendor-generic type for returnage:
-	location := ipLocation{
+	location := IPLocation{
 		Latitude: resp.Location.Latitude,
 		Longitude: resp.Location.Longitude,
 		CountryCode: resp.Country.IsoCode,
@@ -103,7 +105,7 @@ func (api *API) loadConfig(f *os.File) error {
 func (api *API) loadIPGeolocator() error {
 
     geolocator := api.Config.IPGeolocator["Vendor"]
-    switch geoLocator {
+    switch geolocator {
     case "MaxMind":
         maxMindUserID := api.Config.IPGeolocator["MaxMindUserID"]
         maxMindLicenseKey := api.Config.IPGeolocator["MaxMindLicenseKey"]
@@ -129,7 +131,7 @@ func New(f *os.File) (*API, error) {
     }
 
 	// initialize geolocator
-	err := api.loadIPGeolocator()
+	err = api.loadIPGeolocator()
     if err != nil {
         return nil, err
     }
@@ -209,10 +211,31 @@ func getMongoData(URL string, col string) (interface{}, error) {
 
 func (api *API) getIPLocation(c *daemon.Command, r *http.Request) daemon.Response {
 
-	// TODO: get ip from query param and probably sanity-check it
-	// api.geolocator(
+	ipArray, present := r.URL.Query()["ip"]
+	if ! present {
+        return &daemon.Resp{
+            Status: http.StatusBadRequest,
+            Result: nil,
+        }
+	}
+	ip := ipArray[0]
 
-	// handle error responses properly
+	// validate an ip address was actually passed:
+	validIP := net.ParseIP(ip)
+	if validIP == nil {
+        return &daemon.Resp{
+            Status: http.StatusBadRequest,
+            Result: nil,
+        }
+	}
 
-	// return ipLocation
+	ipLocation, err := api.ipGeolocator.IPLocation(ip)
+	if err != nil {
+        return &daemon.Resp{
+            Status: http.StatusInternalServerError,
+            Result: nil,
+        }
+
+	}
+	return daemon.SyncResponse(ipLocation)
 }
