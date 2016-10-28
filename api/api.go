@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jaymell/go-serve/daemon"
 	"github.com/savaki/geoip2"
 	"gopkg.in/mgo.v2"
+    "gopkg.in/mgo.v2/bson"
 )
 
 // leaving the json itself completely untyped:
@@ -33,9 +35,11 @@ type API struct {
 }
 
 type IPLocation struct {
+	IP string `json: "ip"`
 	Latitude    float64 `json: "latitude"`
 	Longitude   float64 `json: "longitude"`
 	CountryCode string  `json: country_iso"`
+	City string	`json: city"`
 }
 
 type IPGeolocator interface {
@@ -44,7 +48,16 @@ type IPGeolocator interface {
 
 type Cache interface {
 	GetCache(ip string) *IPLocation
-	PutCache(ip string) error
+	PutCache(ipLocation IPLocation) error
+}
+
+type CacheEntry struct {
+	IPLocation
+	Date time.Time `json: "date"`
+}
+
+type MongoCache struct {
+	MongoSession
 }
 
 type MongoSession struct {
@@ -70,15 +83,10 @@ func (gl *MaxMindIPGeolocator) ipLocation(ip string) (*geoip2.Response, error) {
 		return nil, fmt.Errorf("Failed to get response from MaxMind")
 	}
 
-	// TODO: write response data to mongo cache:
-
 	return &resp, nil
 }
 
 func (gl *MaxMindIPGeolocator) IPLocation(ip string) (*IPLocation, error) {
-
-	// TODO: check IP cache before calling the
-	// api
 
 	resp, err := gl.ipLocation(ip)
 	if err != nil {
@@ -87,9 +95,11 @@ func (gl *MaxMindIPGeolocator) IPLocation(ip string) (*IPLocation, error) {
 
 	// convert to vendor-generic type for returnage:
 	location := IPLocation{
+		IP: ip,
 		Latitude:    resp.Location.Latitude,
 		Longitude:   resp.Location.Longitude,
 		CountryCode: resp.Country.IsoCode,
+		City: resp.City.Names["en"],
 	}
 
 	return &location, nil
@@ -136,7 +146,7 @@ func (api *API) loadIPGeolocator() error {
 	}
 }
 
-func getMongoSession(url string) (*MongoSession, error) {
+func getMongoSession(url string, col string) (*MongoSession, error) {
 
 	dialInfo, err := mgo.ParseURL(url)
 	if err != nil {
@@ -159,27 +169,32 @@ func getMongoSession(url string) (*MongoSession, error) {
 
 func (api *API) loadCache() error {
 	cache := api.config.Cache["Vendor"]
-	switch cache.ToLower() {
+	switch strings.ToLower(cache) {
 	case "mongo":
 		url := api.config.Cache["URL"]
 		col := api.config.Cache["Collection"]
-		session, err := getMongoSession(url)
+		session, err := getMongoSession(url, col)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		api.cache = session
 		return nil
 	}
 }
 
-func (m *MongoSession) GetCache(ip string) *IPLocation {
-	// TODO
-	return nil
+
+func (m *MongoCache) GetCache(ip string) *IPLocation {
+
+	// TODO: check that it's not expired (over 30 days?)
+
+	query := bson.M{"ip": ip}
+	var ipLocation *IPLocation
+	m.session.DB().C(m.col).Find(query).One(&ipLocation)
+	return ipLocation
 }
 
-func (m *MongoSession) PutCache(ip string) error {
-	// TODO
-	return nil
+func (m *MongoCache) PutCache(ipLocation *IPLocation) error {
+	return m.session.DB().C(m.col).Insert(ipLocation)
 }
 
 func New(f *os.File) (*API, error) {
@@ -292,7 +307,7 @@ func (api *API) getIPLocation(c *daemon.Command, r *http.Request) daemon.Respons
 		}
 	}
 
-	// validate an ip address was actually passed:
+	// validate that a valid ip address was passed:
 	validIP := net.ParseIP(ip)
 	if validIP == nil {
 		return &daemon.Resp{
@@ -301,21 +316,24 @@ func (api *API) getIPLocation(c *daemon.Command, r *http.Request) daemon.Respons
 		}
 	}
 
-	// TODO: check cache
-	ipLocation, err := api.ipGeolocator.IPLocation(ip)
-	if err != nil {
-		return &daemon.Resp{
-			Status: http.StatusInternalServerError,
-			Result: nil,
-		}
+	var ipLocation *IPLocation
 
+	// attempt to get from cache:
+	ipLocation = api.cache.getCache(ip)
+	if ipLocation == nil {
+		ipLocation, err := api.ipGeolocator.IPLocation(ip)
+		if err != nil {
+			return &daemon.Resp{
+				Status: http.StatusInternalServerError,
+				Result: nil,
+			}
+		}
+		// attempt to insert into cache
+		go func() {
+			_ = api.cache.PutCache(ipLocation)
+		}
 	}
-	// TODO: insert into cache
+
 	return daemon.SyncResponse(ipLocation)
 }
 
-func (api *API) getCache(ip) *IPLocation {
-
-	//
-
-}
