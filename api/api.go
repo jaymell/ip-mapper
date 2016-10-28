@@ -48,7 +48,7 @@ type IPGeolocator interface {
 
 type Cache interface {
 	GetCache(ip string) *IPLocation
-	PutCache(ipLocation IPLocation) error
+	PutCache(ipLocation *IPLocation) error
 }
 
 type CacheEntry struct {
@@ -57,12 +57,15 @@ type CacheEntry struct {
 }
 
 type MongoCache struct {
-	MongoSession
+    session *mgo.Session
+    col     string
+	db 		string
 }
 
 type MongoSession struct {
 	session *mgo.Session
 	col     string
+	db		string
 }
 
 type MaxMindIPGeolocator struct {
@@ -163,8 +166,17 @@ func getMongoSession(url string, col string) (*MongoSession, error) {
 	return &MongoSession{
 		session: session,
 		col:     col,
+		db:		 dialInfo.Database,
 	}, nil
 
+}
+
+func mongoSessionToCache(session *MongoSession) (*MongoCache) {
+	return &MongoCache{
+		session: session.session,
+		col: session.col,
+        db:      session.db,
+	}
 }
 
 func (api *API) loadCache() error {
@@ -177,8 +189,12 @@ func (api *API) loadCache() error {
 		if err != nil {
 			return err
 		}
-		api.cache = session
+		//session = mongoSessionToCache(session)
+		new1 := mongoSessionToCache(session)
+		api.cache = new1
 		return nil
+    default:
+        return fmt.Errorf("Unrecognized cache type")
 	}
 }
 
@@ -189,12 +205,12 @@ func (m *MongoCache) GetCache(ip string) *IPLocation {
 
 	query := bson.M{"ip": ip}
 	var ipLocation *IPLocation
-	m.session.DB().C(m.col).Find(query).One(&ipLocation)
+	m.session.DB(m.db).C(m.col).Find(query).One(&ipLocation)
 	return ipLocation
 }
 
 func (m *MongoCache) PutCache(ipLocation *IPLocation) error {
-	return m.session.DB().C(m.col).Insert(ipLocation)
+	return m.session.DB(m.db).C(m.col).Insert(ipLocation)
 }
 
 func New(f *os.File) (*API, error) {
@@ -319,7 +335,7 @@ func (api *API) getIPLocation(c *daemon.Command, r *http.Request) daemon.Respons
 	var ipLocation *IPLocation
 
 	// attempt to get from cache:
-	ipLocation = api.cache.getCache(ip)
+	ipLocation = api.cache.GetCache(ip)
 	if ipLocation == nil {
 		ipLocation, err := api.ipGeolocator.IPLocation(ip)
 		if err != nil {
@@ -331,7 +347,7 @@ func (api *API) getIPLocation(c *daemon.Command, r *http.Request) daemon.Respons
 		// attempt to insert into cache
 		go func() {
 			_ = api.cache.PutCache(ipLocation)
-		}
+		}()
 	}
 
 	return daemon.SyncResponse(ipLocation)
