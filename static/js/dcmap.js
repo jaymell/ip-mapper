@@ -15,12 +15,10 @@ function makeGraphs(error, sitesJson, worldJson) {
 
   // dimensions
   var ipDim = ndx.dimension(function(d) { 
-    //if ( (typeof d["x-forwarded-for"] !== undefined) || (typeof d["x-forwarded-for"] !== null) )
     if ( "x-forwarded-for" in d ) {
       console.log("x forwarded: ", d["x-forwarded-for"]);
       return d["x-forwarded-for"];
     }
-    //if (typeof d["remoteAddress"] !== undefined ) 
     if ( "remoteAddress" in d ) {
       console.log("remoteAddress: ", d["remoteAddress"].replace(/^.*:/, ''));
       return d["remoteAddress"].replace(/^.*:/, '')

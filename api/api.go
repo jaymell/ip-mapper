@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -13,7 +14,7 @@ import (
 	"github.com/jaymell/go-serve/daemon"
 	"github.com/savaki/geoip2"
 	"gopkg.in/mgo.v2"
-    "gopkg.in/mgo.v2/bson"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // leaving the json itself completely untyped:
@@ -35,11 +36,11 @@ type API struct {
 }
 
 type IPLocation struct {
-	IP string `json: "ip"`
+	IP          string  `json: "ip"`
 	Latitude    float64 `json: "latitude"`
 	Longitude   float64 `json: "longitude"`
 	CountryCode string  `json: country_iso"`
-	City string	`json: city"`
+	City        string  `json: city"`
 }
 
 type IPGeolocator interface {
@@ -57,15 +58,15 @@ type CacheEntry struct {
 }
 
 type MongoCache struct {
-    session *mgo.Session
-    col     string
-	db 		string
+	session *mgo.Session
+	col     string
+	db      string
 }
 
 type MongoSession struct {
 	session *mgo.Session
 	col     string
-	db		string
+	db      string
 }
 
 type MaxMindIPGeolocator struct {
@@ -98,11 +99,11 @@ func (gl *MaxMindIPGeolocator) IPLocation(ip string) (*IPLocation, error) {
 
 	// convert to vendor-generic type for returnage:
 	location := IPLocation{
-		IP: ip,
+		IP:          ip,
 		Latitude:    resp.Location.Latitude,
 		Longitude:   resp.Location.Longitude,
 		CountryCode: resp.Country.IsoCode,
-		City: resp.City.Names["en"],
+		City:        resp.City.Names["en"],
 	}
 
 	return &location, nil
@@ -166,16 +167,16 @@ func getMongoSession(url string, col string) (*MongoSession, error) {
 	return &MongoSession{
 		session: session,
 		col:     col,
-		db:		 dialInfo.Database,
+		db:      dialInfo.Database,
 	}, nil
 
 }
 
-func mongoSessionToCache(session *MongoSession) (*MongoCache) {
+func mongoSessionToCache(session *MongoSession) *MongoCache {
 	return &MongoCache{
 		session: session.session,
-		col: session.col,
-        db:      session.db,
+		col:     session.col,
+		db:      session.db,
 	}
 }
 
@@ -193,11 +194,10 @@ func (api *API) loadCache() error {
 		new1 := mongoSessionToCache(session)
 		api.cache = new1
 		return nil
-    default:
-        return fmt.Errorf("Unrecognized cache type")
+	default:
+		return fmt.Errorf("Unrecognized cache type")
 	}
 }
-
 
 func (m *MongoCache) GetCache(ip string) *IPLocation {
 
@@ -323,6 +323,7 @@ func (api *API) getIPLocation(c *daemon.Command, r *http.Request) daemon.Respons
 		}
 	}
 
+	log.Println("validating ip")
 	// validate that a valid ip address was passed:
 	validIP := net.ParseIP(ip)
 	if validIP == nil {
@@ -335,8 +336,11 @@ func (api *API) getIPLocation(c *daemon.Command, r *http.Request) daemon.Respons
 	var ipLocation *IPLocation
 
 	// attempt to get from cache:
+	log.Println("trying to read from cache")
 	ipLocation = api.cache.GetCache(ip)
+	log.Println("this is the cached ip: %s", ipLocation)
 	if ipLocation == nil {
+		log.Println("trying to get response from geolocator")
 		ipLocation, err := api.ipGeolocator.IPLocation(ip)
 		if err != nil {
 			return &daemon.Resp{
@@ -345,11 +349,10 @@ func (api *API) getIPLocation(c *daemon.Command, r *http.Request) daemon.Respons
 			}
 		}
 		// attempt to insert into cache
+		log.Println("trying to insert iplocation object into cache")
 		go func() {
 			_ = api.cache.PutCache(ipLocation)
 		}()
 	}
-
 	return daemon.SyncResponse(ipLocation)
 }
-
