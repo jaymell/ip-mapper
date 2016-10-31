@@ -21,10 +21,10 @@ import (
 type Data interface{}
 
 type APIConfig struct {
-	DataURL        string            `json: "DataURL"`
-	CollectionName string            `json: "CollectionName"`
-	IPGeolocator   map[string]string `json: "IPGeolocator"`
-	Cache          map[string]string `json: "Cache"`
+	DataURL        string            `json:"DataURL"`
+	CollectionName string            `json:"CollectionName"`
+	IPGeolocator   map[string]string `json:"IPGeolocator"`
+	Cache          map[string]string `json:"Cache"`
 }
 
 // stores persistent stuff needed for API, e.g., geolocation object, db handle
@@ -36,11 +36,11 @@ type API struct {
 }
 
 type IPLocation struct {
-	IP          string  `json: "ip"`
-	Latitude    float64 `json: "latitude"`
-	Longitude   float64 `json: "longitude"`
-	CountryCode string  `json: country_iso"`
-	City        string  `json: city"`
+	IP          string  `json:"ip"`
+	Latitude    float64 `json:"latitude"`
+	Longitude   float64 `json:"longitude"`
+	CountryCode string  `json:"country_iso"`
+	City        string  `json:"city"`
 }
 
 type IPGeolocator interface {
@@ -54,7 +54,7 @@ type Cache interface {
 
 type CacheEntry struct {
 	IPLocation
-	Date time.Time `json: "date"`
+	Date time.Time `json:"date"`
 }
 
 type MongoCache struct {
@@ -245,11 +245,16 @@ func New(f *os.File) (*API, error) {
 			Path: "/iplocate",
 			GET:  api.getIPLocation,
 		}
+		mockCmd = &daemon.Command{
+			Path: "/mock",
+			GET: api.mockLocation,
+		}
 	)
 
 	var apiRoutes = []*daemon.Command{
 		jsonCmd,
 		ipLocateCmd,
+		mockCmd,
 	}
 
 	for _, c := range apiRoutes {
@@ -355,4 +360,16 @@ func (api *API) getIPLocation(c *daemon.Command, r *http.Request) daemon.Respons
 		}()
 	}
 	return daemon.SyncResponse(ipLocation)
+}
+
+func (api *API) mockLocation(c *daemon.Command, r *http.Request) daemon.Response {
+	log.Println("returning mock location")
+	location := IPLocation{
+		IP:          "69.69.66.60",
+		Latitude:    69.69,
+		Longitude:   66.66,
+		CountryCode: "US",
+		City:        "Texasville",
+	}
+	return daemon.SyncResponse(&location)
 }

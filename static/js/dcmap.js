@@ -1,45 +1,122 @@
-var q = d3.queue();
-  q.defer(d3.json, "/json")
-  q.defer(d3.json, "/geojson/countries.geojson")
-  q.await(makeGraphs);
+d3.queue()
+  .defer(getLogs, "/json")
+  .defer(d3.json, "/geojson/countries.geojson")
+  .await(makeGraphs);
 
-function makeGraphs(error, sitesJson, worldJson) {
 
-  var topSites = sitesJson['Result'];
-  var worldChart = dc.geoChoroplethChart("#world-chart")
+function exists(obj, key) {
+  return typeof obj[key] !== 'undefined';
+}
 
+// once logging json is received, iterate through IPs and 
+// concurrently hit API for geolocation data for each of them
+//var ipLocateRoute = "/iplocate";
+var ipLocateRoute = "/mock";
+function geolocate(err, json, callback) {
+  if (err) callback(err);
+  json.forEach(function(item, index) {
+    d3.json(ipLocateRoute + "?ip=" + item.ip, function(err, location) {
+      if (err) callback(err);
+      location = location.Result;
+      Object.keys(location).forEach(function(v) {
+        item[v] = location[v];
+      });
+    });
+  });
+}
+
+// get first ip from comma-sep'd list of ips
+function cleanIp(ip) {
+  idx = ip.indexOf(",")
+  if (idx > -1) {
+    return ip.slice(0, idx);
+  }
+  return ip
+}
+
+// clean up some of the fields for easier handling later
+function parseJson(callback) {
+  return function(err, json) {
+    if (err) callback(err);
+    if (json['Status'] !== 200) callback(null);
+
+    var result = json.Result;
+    var cleaned = [];
+    
+    for(var i=0; i<result.length; i++) {
+      if ( exists(result[i], "x-forwarded-for") ) {
+        result[i]["ip"] = cleanIp(result[i]["x-forwarded-for"]);
+        delete result[i]["x-forwarded-for"];
+      } 
+      else if ( exists(result[i], "remoteAddress") ) {
+        // remove extra formatting express puts in place:
+        result[i]["ip"] = cleanIp(result[i]["remoteAddress"].replace(/^.*:/, ''));
+        delete result[i]["remoteAddress"];
+      } 
+      else {
+        console.log("no ip found for: ", result[i]);
+        continue;
+      }
+      delete result[i]["_id"];
+      cleaned.push(result[i]);
+    }
+    geolocate(null, cleaned, callback);
+  }
+}
+
+
+// get logging data from API
+function getLogs(path, callback) {
+  d3.json(path, parseJson(callback));
+}
+
+var ipdim = [];
+
+function makeGraphs(error, json, worldJson) {
+  var worldChart = dc.geoChoroplethChart("#world-chart");
+
+  // json.forEach(function(i) {
+  //   console.log(i)
+  // });
   // var timeChart = 
 
   // crossfilter
-  var ndx = crossfilter(topSites);
-
-  // dimensions
+  var ndx = crossfilter(json);
+  ipdim = json;
+  //  dimensions
   var ipDim = ndx.dimension(function(d) { 
-    if ( "x-forwarded-for" in d ) {
-      console.log("x forwarded: ", d["x-forwarded-for"]);
-      return d["x-forwarded-for"];
+    if (exists(d, "ip")) { 
+      return d["ip"];
     }
-    if ( "remoteAddress" in d ) {
-      console.log("remoteAddress: ", d["remoteAddress"].replace(/^.*:/, ''));
-      return d["remoteAddress"].replace(/^.*:/, '')
-    }
-    console.log("nothing found!");
   });
 
 
   var dateDim = ndx.dimension(function(d) {
-    if (typeof d['date'] !== 'undefined')
+    if (exists(d, "date")) {
       return d['date'];
+    }
+  });
+  var minDate = dateDim.bottom(1)[0]["date"];
+  var maxDate = dateDim.top(1)[0]["date"];
+
+  console.log("here");  
+
+  var countryDim = ndx.dimension(function(d) {
+    if (exists(d,"country_iso")) {
+      return d["country_iso"];
+    }
   });
 
-  // metrics
-  var totalIpsByCountry = ipDim.group().reduceCount(function(d) {
-    if (typeof d["ips"][0] !== 'undefined' ) {
-      if (typeof d["ips"][0]["country"] !== 'undefined' )
-        return d["ips"][0]["country"];
-  }});
 
-  var max_country = totalIpsByCountry.top(1)[0].value;
+  // metrics
+  var totalIpsByCountry = countryDim.group().reduceCount(function(d) {
+    console.log(d);
+    if (exists(d, "country_iso")) {
+      return d["country_iso"];
+    }
+  });
+
+  var maxCountry = totalIpsByCountry.top(1)[0].value;
 
   var height = 800;
   var width = 1600;
@@ -67,8 +144,6 @@ function makeGraphs(error, sitesJson, worldJson) {
               .attr("height", height)
               .call(zoom);
 
-  var minDate = dateDim.bottom(1)[0]["date"];
-  var maxDate = dateDim.top(1)[0]["date"];
 
 /*
     timeChart
@@ -89,7 +164,7 @@ function makeGraphs(error, sitesJson, worldJson) {
         .dimension(ipDim)
         .group(totalIpsByCountry)
         .colors(["#E2F2FF", "#C4E4FF", "#9ED2FF", "#81C5FF", "#6BBAFF", "#51AEFF", "#36A2FF", "#1E96FF", "#0089FF", "#0061B5"])
-        //.colorDomain([0, max_country])
+        //.colorDomain([0, maxCountry])
         .colorDomain([0, 10])
         .colorCalculator(function (d) { return d ? worldChart.colors()(d) : '#ccc';})
         .overlayGeoJson(worldJson["features"], "country", function (d) {
