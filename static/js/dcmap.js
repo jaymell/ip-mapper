@@ -1,3 +1,6 @@
+var date = new Date();
+console.log("Begin: ", date.toISOString());
+
 d3.queue()
   .defer(getLogs, "/json")
   .defer(d3.json, "/geojson/countries.geojson")
@@ -8,20 +11,37 @@ function exists(obj, key) {
   return typeof obj[key] !== 'undefined';
 }
 
+
+
 // once logging json is received, iterate through IPs and 
 // concurrently hit API for geolocation data for each of them
-//var ipLocateRoute = "/iplocate";
-var ipLocateRoute = "/mock";
 function geolocate(err, json, callback) {
+
+  var ipLocateRoute = "/iplocate";
+  // var ipLocateRoute = "/mock";
+
   if (err) callback(err);
-  json.forEach(function(item, index) {
-    d3.json(ipLocateRoute + "?ip=" + item.ip, function(err, location) {
-      if (err) callback(err);
-      location = location.Result;
-      Object.keys(location).forEach(function(v) {
-        item[v] = location[v];
-      });
-    });
+  var q = d3.queue();
+  
+  var date = new Date();
+  console.log("Start geolocating: ", date.toISOString());
+  json.forEach(function(item) {
+    q.defer(d3.json, ipLocateRoute + "?ip=" + item.ip);
+  });
+  
+  q.awaitAll(function(err, locations) {
+    if (err) callback(err);
+    for(var i=0; i<json.length; i++) {
+      if (exists(locations[i], "Result")) {
+        Object.keys(locations[i]["Result"]).forEach(function(item) {
+          json[i][item] = locations[i]["Result"][item];
+        });
+      }
+    }
+
+    var date = new Date();
+    console.log("Done geolocating: ", date.toISOString());
+    callback(null, json);
   });
 }
 
@@ -57,6 +77,7 @@ function parseJson(callback) {
         console.log("no ip found for: ", result[i]);
         continue;
       }
+      result[i]["date"] = new Date(result[i]["date"]);
       delete result[i]["_id"];
       cleaned.push(result[i]);
     }
@@ -70,26 +91,21 @@ function getLogs(path, callback) {
   d3.json(path, parseJson(callback));
 }
 
-var ipdim = [];
-
+var timechart;
+var worldchart;
+var proj;
 function makeGraphs(error, json, worldJson) {
-  var worldChart = dc.geoChoroplethChart("#world-chart");
-
-  // json.forEach(function(i) {
-  //   console.log(i)
-  // });
-  // var timeChart = 
+  console.log(json);
 
   // crossfilter
   var ndx = crossfilter(json);
-  ipdim = json;
+
   //  dimensions
   var ipDim = ndx.dimension(function(d) { 
     if (exists(d, "ip")) { 
       return d["ip"];
     }
   });
-
 
   var dateDim = ndx.dimension(function(d) {
     if (exists(d, "date")) {
@@ -99,76 +115,76 @@ function makeGraphs(error, json, worldJson) {
   var minDate = dateDim.bottom(1)[0]["date"];
   var maxDate = dateDim.top(1)[0]["date"];
 
-  console.log("here");  
-
   var countryDim = ndx.dimension(function(d) {
     if (exists(d,"country_iso")) {
+      if (!exists(d,"date")) console.log("no date!")
       return d["country_iso"];
     }
   });
-
 
   // metrics
-  var totalIpsByCountry = countryDim.group().reduceCount(function(d) {
-    console.log(d);
-    if (exists(d, "country_iso")) {
-      return d["country_iso"];
-    }
+  var hitsByCountry = countryDim.group();
+  var hitsByDate = dateDim.group(function(d) {
+    return d3.time.day(d);
   });
+  var maxCountry = hitsByCountry.top(1)[0].value;
 
-  var maxCountry = totalIpsByCountry.top(1)[0].value;
 
-  var height = 800;
-  var width = 1600;
-
+  // chart objects
+  var worldChartDiv = "#world-chart";
+  var timeChartDiv = '#time-chart';
+  var worldChart = dc.geoChoroplethChart(worldChartDiv);
+  var timeChart = dc.barChart(timeChartDiv);
   var projection = d3.geo.equirectangular()
-                     .scale(200)
-                     .center([-97,33]);
+                     // .scale(50)
+                     .center([0,0]);
+  proj = projection;
+  // var zoomed = function() {
+  //   projection 
+  //     .translate(d3.event.translate)
+  //     .scale(d3.event.scale);
+  //   worldChart.render();
+  // }
 
-  function zoomed() {
-    projection 
-      .translate(d3.event.translate)
-      .scale(d3.event.scale);
-    worldChart.render();
-  }
+  var worldChartHeight = $(worldChartDiv).height();
+  var worldChartWidth = $(worldChartDiv).width();
+  // var zoom = d3.behavior.zoom()
+  //              .translate(projection.translate())
+  //              //.scale(projection.scale())
+  //              .scale(1 << 8) // not sure why, but 8 seems like a good number
+  //              //.scaleExtent([height/2, 8 * height]) // defines the max amount you can zoom
+  //              .on("zoom", zoomed);
 
-  var zoom = d3.behavior.zoom()
-               .translate(projection.translate())
-               //.scale(projection.scale())
-               .scale(1 << 8) // not sure why, but 8 seems like a good number
-               //.scaleExtent([height/2, 8 * height]) // defines the max amount you can zoom
-               .on("zoom", zoomed);
-
-  var svg = d3.select("#world-chart")
-              .attr("width", width)
-              .attr("height", height)
-              .call(zoom);
-
-
-/*
-    timeChart
+  // var svg = d3.select("#world-chart")
+  //             .attr("width", worldChartWidth)
+  //             .attr("height", worldChartHeight)
+  //             .call(zoom);
+  
+  timeChart
         .width(600)
         .height(160)
         .margins({top: 10, right: 50, bottom: 30, left: 50})
         .dimension(dateDim)
-        .group(numProjectsByDate)
-        .transitionDuration(500)
+        .group(hitsByDate)
+        // .transitionDuration(500)
         .x(d3.time.scale().domain([minDate, maxDate]))
         .elasticY(true)
-        .xAxisLabel("Year")
-        .yAxis().ticks(4);
-*/
+        .gap(1)
+        // .xAxisLabel("Date")
+        .yAxis().ticks(5);
+
+timechart = timeChart;
+
     worldChart
-        .height(height)
-        .width(width)
-        .dimension(ipDim)
-        .group(totalIpsByCountry)
-        .colors(["#E2F2FF", "#C4E4FF", "#9ED2FF", "#81C5FF", "#6BBAFF", "#51AEFF", "#36A2FF", "#1E96FF", "#0089FF", "#0061B5"])
-        //.colorDomain([0, maxCountry])
+        .height(500)
+        .width(1000)
+        .dimension(countryDim)
+        .group(hitsByCountry)
+        .colors(["#ffe6e6", "#ffcccc", "#ffb3b3", "#ff9999", "#ff8080", "#ff6666", "#ff4d4d", "#ff3333", "#ff1a1a", "#ff0000"])
         .colorDomain([0, 10])
-        .colorCalculator(function (d) { return d ? worldChart.colors()(d) : '#ccc';})
+        .colorCalculator(function (d) { return d ? worldChart.colors()(d) : '#99ff99';})
         .overlayGeoJson(worldJson["features"], "country", function (d) {
-            return d.properties.iso_a3;
+            return d.properties.iso_a2;
         })
         .projection(projection)
         .title(function (d) {
@@ -176,9 +192,9 @@ function makeGraphs(error, json, worldJson) {
             var total = d.value ? d.value : 0;
             return "Country: " + country
                  + "\n"
-                 + "Total Sites: " + total + " Sites";
+                 + "Total Hits: " + total + " Hits";
         })
-
+worldchart = worldChart;
   dc.renderAll();
 
 }
