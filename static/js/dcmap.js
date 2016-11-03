@@ -15,14 +15,9 @@ function exists(obj, key) {
 function lookupIp(ip, locations, callback) {
   // var ipLocateRoute = "/mock";
   var ipLocateRoute = "/iplocate";
-  if (ip in locations) {
-    console.log("duplicate --skipping");
-    callback(null);
-  }
-  locations[ip] = null;
-  d3.json(ipLocateRoute + "?ip=" + ip, function(err, location) {
+  d3.json(ipLocateRoute + "?ip=" + ip, function(err, resp) {
     if (err) callback(err);
-    locations[ip] = location["Result"];
+    locations[ip] = resp["Result"];
     callback(null);
   });
 }
@@ -31,21 +26,27 @@ function lookupIp(ip, locations, callback) {
 // pass IPs off to lookupIp for further handling
 function geolocate(err, json, callback) {
   if (err) callback(err);
-  var locations = {};
+  var locations = {}; // hold responses
   var q = d3.queue();
   
   var date = new Date();
   console.log("Start geolocating: ", date.toISOString());
   json.forEach(function(item) {
-      q.defer(lookupIp, item.ip, locations);
+    var ip = item.ip;
+    if (ip in locations) {
+      console.log("duplicate -- skipping");
+      return;
+    }
+      locations[ip] = null;
+      q.defer(lookupIp, ip, locations);
   });
   
-  q.await(function(err) {
-    console.log('called awaitAll function')
+  q.awaitAll(function(err) {
+    console.log('await function called');
     if (err) callback(err);
     for(var i=0; i<json.length; i++) {
-      ip = json[i].ip;
-      if (exists(locations, ip)) {
+      var ip = json[i].ip;
+      if (exists(locations, ip) && locations.ip !== null) {
         Object.keys(locations[ip]).forEach(function(item) {
           json[i][item] = locations[ip][item];
         });
