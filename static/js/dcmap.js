@@ -11,41 +11,54 @@ function exists(obj, key) {
   return typeof obj[key] !== 'undefined';
 }
 
-
-
-// once logging json is received, iterate through IPs and 
-// concurrently hit API for geolocation data for each of them
-function geolocate(err, json, callback) {
-
-  var ipLocateRoute = "/iplocate";
+// call api for lookups, avoiding duplicate calls
+function lookupIp(ip, locations, callback) {
   // var ipLocateRoute = "/mock";
+  var ipLocateRoute = "/iplocate";
+  if (ip in locations) {
+    console.log("duplicate --skipping");
+    callback(null);
+  }
+  locations[ip] = null;
+  d3.json(ipLocateRoute + "?ip=" + ip, function(err, location) {
+    if (err) callback(err);
+    locations[ip] = location["Result"];
+    callback(null);
+  });
+}
 
+// set up queue, iterate through json and 
+// pass IPs off to lookupIp for further handling
+function geolocate(err, json, callback) {
   if (err) callback(err);
+  var locations = {};
   var q = d3.queue();
   
   var date = new Date();
   console.log("Start geolocating: ", date.toISOString());
   json.forEach(function(item) {
-    q.defer(d3.json, ipLocateRoute + "?ip=" + item.ip);
+      q.defer(lookupIp, item.ip, locations);
   });
   
-  q.awaitAll(function(err, locations) {
+  q.await(function(err) {
+    console.log('called awaitAll function')
     if (err) callback(err);
     for(var i=0; i<json.length; i++) {
-      if (exists(locations[i], "Result")) {
-        Object.keys(locations[i]["Result"]).forEach(function(item) {
-          json[i][item] = locations[i]["Result"][item];
+      ip = json[i].ip;
+      if (exists(locations, ip)) {
+        Object.keys(locations[ip]).forEach(function(item) {
+          json[i][item] = locations[ip][item];
         });
       }
     }
-
     var date = new Date();
     console.log("Done geolocating: ", date.toISOString());
     callback(null, json);
   });
 }
 
-// get first ip from comma-sep'd list of ips
+// get first ip from comma-sep'd list of ips;
+// may want these later but for now just complicate things
 function cleanIp(ip) {
   idx = ip.indexOf(",")
   if (idx > -1) {
@@ -146,8 +159,6 @@ function makeGraphs(error, json, worldJson) {
   //   worldChart.render();
   // }
 
-  var worldChartHeight = $(worldChartDiv).height();
-  var worldChartWidth = $(worldChartDiv).width();
   // var zoom = d3.behavior.zoom()
   //              .translate(projection.translate())
   //              //.scale(projection.scale())
