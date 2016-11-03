@@ -1,12 +1,15 @@
 {
     "DataURL": "mongodb://localhost/logger",
     "CollectionName": "logs",
+	"Cache": {
+		"Vendor": "mongo",
+    	"URL": "mongodb://localhost/ipgeolocator",
+	    "Collection": "ipgeolocator"
+	},
     "IPGeolocator": {
         "Vendor": "MaxMind",
-        "MaxMindUserID": "<ID>",
-        "MaxMindLicenseKey": "<Key>",
-        "CacheURL": "mongodb://localhost/ipgeolocator",
-        "CollectionName": "ipgeolocator"
+        "MaxMindUserID": "<user id>",
+        "MaxMindLicenseKey": "<license key>"
     }
 }
 
