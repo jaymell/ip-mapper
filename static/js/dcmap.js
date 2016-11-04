@@ -105,9 +105,7 @@ function getLogs(path, callback) {
   d3.json(path, parseJson(callback));
 }
 
-var timechart;
-var worldchart;
-var proj;
+// build the charts
 function makeGraphs(error, json, worldJson) {
   console.log(json);
 
@@ -138,9 +136,11 @@ function makeGraphs(error, json, worldJson) {
 
   // metrics
   var hitsByCountry = countryDim.group();
+
   var hitsByDate = dateDim.group(function(d) {
     return d3.time.day(d);
   });
+
   var maxCountry = hitsByCountry.top(1)[0].value;
 
 
@@ -152,7 +152,7 @@ function makeGraphs(error, json, worldJson) {
   var projection = d3.geo.equirectangular()
                      // .scale(50)
                      .center([0,0]);
-  proj = projection;
+
   // var zoomed = function() {
   //   projection 
   //     .translate(d3.event.translate)
@@ -173,7 +173,7 @@ function makeGraphs(error, json, worldJson) {
   //             .call(zoom);
   
   timeChart
-        .width(600)
+        .width(800)
         .height(160)
         .margins({top: 10, right: 50, bottom: 30, left: 50})
         .dimension(dateDim)
@@ -185,14 +185,12 @@ function makeGraphs(error, json, worldJson) {
         // .xAxisLabel("Date")
         .yAxis().ticks(5);
 
-timechart = timeChart;
-
     worldChart
         .height(500)
         .width(1000)
         .dimension(countryDim)
         .group(hitsByCountry)
-        .colors(["#ffe6e6", "#ffcccc", "#ffb3b3", "#ff9999", "#ff8080", "#ff6666", "#ff4d4d", "#ff3333", "#ff1a1a", "#ff0000"])
+        .colors(d3.scale.quantize().range(["#ffe6e6", "#ffcccc", "#ffb3b3", "#ff9999", "#ff8080", "#ff6666", "#ff4d4d", "#ff3333", "#ff1a1a", "#ff0000"]))
         .colorDomain([0, 10])
         .colorCalculator(function (d) { return d ? worldChart.colors()(d) : '#99ff99';})
         .overlayGeoJson(worldJson["features"], "country", function (d) {
@@ -206,7 +204,6 @@ timechart = timeChart;
                  + "\n"
                  + "Total Hits: " + total + " Hits";
         })
-worldchart = worldChart;
   dc.renderAll();
 
 }

@@ -1,18 +1,13 @@
 html, body {
-/*	height: 100%;
-	margin: none;*/
-}
-/*
-#world-chart {
-
 }
 
-#time-chart {
+.dc-chart {
+	clear: right;
+}
 
+.heading {
+	clear: left;
 }
 
 #background {
-
-*/}
-
-*/
+}
