@@ -41,6 +41,7 @@ type IPLocation struct {
 	Longitude   float64 `json:"longitude"`
 	CountryCode string  `json:"country_iso"`
 	City        string  `json:"city"`
+	Country     string  `json:"country"`
 }
 
 type IPGeolocator interface {
@@ -104,6 +105,7 @@ func (gl *MaxMindIPGeolocator) IPLocation(ip string) (*IPLocation, error) {
 		Longitude:   resp.Location.Longitude,
 		CountryCode: resp.Country.IsoCode,
 		City:        resp.City.Names["en"],
+		Country:     resp.Country.Names["en"],
 	}
 
 	return &location, nil
