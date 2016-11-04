@@ -105,6 +105,7 @@ function getLogs(path, callback) {
   d3.json(path, parseJson(callback));
 }
 
+
 // build the charts
 function makeGraphs(error, json, worldJson) {
   console.log(json);
@@ -129,7 +130,6 @@ function makeGraphs(error, json, worldJson) {
 
   var countryDim = ndx.dimension(function(d) {
     if (exists(d,"country_iso")) {
-      if (!exists(d,"date")) console.log("no date!")
       return d["country_iso"];
     }
   });
@@ -143,7 +143,6 @@ function makeGraphs(error, json, worldJson) {
 
   var maxCountry = hitsByCountry.top(1)[0].value;
 
-
   // chart objects
   var worldChartDiv = "#world-chart";
   var timeChartDiv = '#time-chart';
@@ -153,43 +152,44 @@ function makeGraphs(error, json, worldJson) {
                      // .scale(50)
                      .center([0,0]);
 
-  // var zoomed = function() {
-  //   projection 
-  //     .translate(d3.event.translate)
-  //     .scale(d3.event.scale);
-  //   worldChart.render();
-  // }
+/*
+  var zoomed = function() {
+    projection 
+      .translate(d3.event.translate)
+      .scale(d3.event.scale);
+    worldChart.render();
+  }
 
-  // var zoom = d3.behavior.zoom()
-  //              .translate(projection.translate())
-  //              //.scale(projection.scale())
-  //              .scale(1 << 8) // not sure why, but 8 seems like a good number
-  //              //.scaleExtent([height/2, 8 * height]) // defines the max amount you can zoom
-  //              .on("zoom", zoomed);
+  var zoom = d3.behavior.zoom()
+               .translate(projection.translate())
+               //.scale(projection.scale())
+               .scale(1 << 8) // not sure why, but 8 seems like a good number
+               //.scaleExtent([height/2, 8 * height]) // defines the max amount you can zoom
+               .on("zoom", zoomed);
 
-  // var svg = d3.select("#world-chart")
-  //             .attr("width", worldChartWidth)
-  //             .attr("height", worldChartHeight)
-  //             .call(zoom);
-  
+  d3.select("#world-chart")
+   .call(zoom);
+*/
+
   timeChart
         .width(800)
         .height(160)
         .margins({top: 10, right: 50, bottom: 30, left: 50})
         .dimension(dateDim)
         .group(hitsByDate)
-        // .transitionDuration(500)
+        .transitionDuration(500)
         .x(d3.time.scale().domain([minDate, maxDate]))
         .elasticY(true)
         .gap(1)
-        // .xAxisLabel("Date")
         .yAxis().ticks(5);
 
-    worldChart
+
+  worldChart
         .height(500)
         .width(1000)
         .dimension(countryDim)
         .group(hitsByCountry)
+        .transitionDuration(500)
         .colors(d3.scale.quantize().range(["#ffe6e6", "#ffcccc", "#ffb3b3", "#ff9999", "#ff8080", "#ff6666", "#ff4d4d", "#ff3333", "#ff1a1a", "#ff0000"]))
         .colorDomain([0, 10])
         .colorCalculator(function (d) { return d ? worldChart.colors()(d) : '#99ff99';})
