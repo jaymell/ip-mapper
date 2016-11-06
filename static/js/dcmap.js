@@ -180,9 +180,10 @@ function makeGraphs(error, json, worldJson) {
         .transitionDuration(500)
         .x(d3.time.scale().domain([minDate, maxDate]))
         .elasticY(true)
-        .gap(1)
-        .yAxis().ticks(5);
-
+        .gap(1);
+  
+  timeChart.yAxis().ticks(5);
+  timeChart.xUnits(d3.time.days);  // this prevents skinny "1-second" bars
 
   worldChart
         .height(500)
