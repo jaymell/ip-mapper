@@ -5,13 +5,18 @@
   <link rel="stylesheet" href="/css/dcmap.css">
 </head> 
 <body>
-  <div id="background">
-  <div class="heading"><strong><p>Request Counts by Country</p></strong></div>
-  <div id="world-chart" class="dc-chart"></div>
-  <div class="heading"><strong><p>Filter by Time</p></strong></div>
-  <div id="time-chart" class="dc-chart"></div>
-  <div class="heading"><strong><p>Request Counts by Country</p></strong></div>
-  <div id="pie-chart" class="dc-chart"></div>
+  <div id="world-container" class="chart-container">
+    <div class="heading"><strong><p>Request Counts by Country</p></strong></div>
+    <div id="world-chart" class="dc-chart"></div>
+  </div>
+  <div class="spacer"></div>
+  <div class="chart-container" style="clear: left;">
+    <div class="heading"><strong><p>Filter by Time</p></strong></div>
+    <div id="time-chart" class="dc-chart"></div>
+  </div>
+  <div class="chart-container">
+    <div class="heading"><strong><p>Request Counts by Country</p></strong></div>
+    <div id="pie-chart" class="dc-chart"></div>
   </div>
   <script src="/lib/js/crossfilter.js"></script>
   <script src="/lib/js/datamaps.world.min.js"></script>

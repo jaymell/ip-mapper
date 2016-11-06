@@ -1,13 +1,8 @@
-html, body {
+.spacer {
+  clear: left;
 }
 
-.dc-chart {
-	clear: right;
+.chart-container {
+  float: left;
 }
 
-.heading {
-	clear: left;
-}
-
-#background {
-}
