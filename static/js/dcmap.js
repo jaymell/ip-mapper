@@ -6,21 +6,57 @@ d3.queue()
   .defer(d3.json, "/geojson/countries.geojson")
   .await(makeGraphs);
 
-
 function exists(obj, key) {
   return typeof obj[key] !== 'undefined';
 }
 
-// call api for lookups, avoiding duplicate calls
-function lookupIp(ip, locations, callback) {
-  // var ipLocateRoute = "/mock";
-  var ipLocateRoute = "/iplocate";
-  d3.json(ipLocateRoute + "?ip=" + ip, function(err, resp) {
-    if (err) callback(err);
-    locations[ip] = resp["Result"];
-    callback(null);
-  });
+// get logging data from API
+function getLogs(path, callback) {
+  d3.json(path, parseJson(callback));
 }
+
+// clean up some of the fields for easier handling later
+function parseJson(callback) {
+  return function(err, json) {
+    if (err) callback(err);
+    if (json['Status'] !== 200) callback(null);
+
+    var result = json.Result;
+    var cleaned = [];
+    
+    for(var i=0; i<result.length; i++) {
+      if ( exists(result[i], "x-forwarded-for") ) {
+        result[i]["ip"] = cleanIp(result[i]["x-forwarded-for"]);
+        delete result[i]["x-forwarded-for"];
+      } 
+      else if ( exists(result[i], "remoteAddress") ) {
+        // remove extra formatting express puts in place:
+        result[i]["ip"] = cleanIp(result[i]["remoteAddress"].replace(/^.*:/, ''));
+        delete result[i]["remoteAddress"];
+      } 
+      else {
+        console.log("no ip found for: ", result[i]);
+        continue;
+      }
+      result[i]["date"] = new Date(result[i]["date"]);
+      delete result[i]["_id"];
+      cleaned.push(result[i]);
+    }
+    geolocate(null, cleaned, callback);
+  }
+}
+
+
+// get first ip from comma-sep'd list of ips;
+// may want these later but for now just complicate things
+function cleanIp(ip) {
+  idx = ip.indexOf(",")
+  if (idx > -1) {
+    return ip.slice(0, idx);
+  }
+  return ip
+}
+
 
 // set up queue, iterate through json and 
 // pass IPs off to lookupIp for further handling
@@ -58,62 +94,30 @@ function geolocate(err, json, callback) {
   });
 }
 
-// get first ip from comma-sep'd list of ips;
-// may want these later but for now just complicate things
-function cleanIp(ip) {
-  idx = ip.indexOf(",")
-  if (idx > -1) {
-    return ip.slice(0, idx);
-  }
-  return ip
-}
 
-// clean up some of the fields for easier handling later
-function parseJson(callback) {
-  return function(err, json) {
+// call api for lookups, avoiding duplicate calls
+function lookupIp(ip, locations, callback) {
+  // var ipLocateRoute = "/mock";
+  var ipLocateRoute = "/iplocate";
+  d3.json(ipLocateRoute + "?ip=" + ip, function(err, resp) {
     if (err) callback(err);
-    if (json['Status'] !== 200) callback(null);
-
-    var result = json.Result;
-    var cleaned = [];
-    
-    for(var i=0; i<result.length; i++) {
-      if ( exists(result[i], "x-forwarded-for") ) {
-        result[i]["ip"] = cleanIp(result[i]["x-forwarded-for"]);
-        delete result[i]["x-forwarded-for"];
-      } 
-      else if ( exists(result[i], "remoteAddress") ) {
-        // remove extra formatting express puts in place:
-        result[i]["ip"] = cleanIp(result[i]["remoteAddress"].replace(/^.*:/, ''));
-        delete result[i]["remoteAddress"];
-      } 
-      else {
-        console.log("no ip found for: ", result[i]);
-        continue;
-      }
-      result[i]["date"] = new Date(result[i]["date"]);
-      delete result[i]["_id"];
-      cleaned.push(result[i]);
-    }
-    geolocate(null, cleaned, callback);
-  }
+    locations[ip] = resp["Result"];
+    callback(null);
+  });
 }
 
 
-// get logging data from API
-function getLogs(path, callback) {
-  d3.json(path, parseJson(callback));
-}
-
-
+var n;
 // build the charts
 function makeGraphs(error, json, worldJson) {
   console.log(json);
 
-  // crossfilter
   var ndx = crossfilter(json);
 
-  //  dimensions
+  var allDim = ndx.dimension(function(d) {
+    return d;
+  })
+
   var ipDim = ndx.dimension(function(d) { 
     if (exists(d, "ip")) { 
       return d["ip"];
@@ -146,14 +150,25 @@ function makeGraphs(error, json, worldJson) {
     return d3.time.day(d);
   });
 
+  var urlDim = ndx.dimension(function(d) {
+    if (exists(d, "url")) {
+      return d["url"];
+    }
+  });
+
+  n = urlDim;
+
   // chart objects
   var worldChartDiv = "#world-chart";
+  var totalHitsDiv = "#total-hits";
   var timeChartDiv = '#time-chart';
   var pieChartDiv = '#pie-chart';
+  var urlTableDiv = '#url-table';
   var worldChart = dc.geoChoroplethChart(worldChartDiv);
+  var totalHits = dc.numberDisplay(totalHitsDiv);
   var timeChart = dc.barChart(timeChartDiv);
   var pieChart = dc.pieChart(pieChartDiv);
-
+  var urlTable = dc.dataTable(urlTableDiv);
   var projection = d3.geo.equirectangular()
                      // .scale(50)
                      .center([0,0]);
@@ -183,7 +198,9 @@ function makeGraphs(error, json, worldJson) {
     .dimension(countryCodeDim)
     .group(hitsByCountryCode)
     .transitionDuration(500)
-    .colors(d3.scale.quantize().range(["#ffe6e6", "#ffcccc", "#ffb3b3", "#ff9999", "#ff8080", "#ff6666", "#ff4d4d", "#ff3333", "#ff1a1a", "#ff0000"]))
+    .colors(d3.scale.quantize().range(["#ffe6e6", "#ffcccc", "#ffb3b3", 
+                                       "#ff9999", "#ff8080", "#ff6666", 
+                                       "#ff4d4d", "#ff3333", "#ff1a1a", "#ff0000"]))
     .colorDomain([0, 10])
     .colorCalculator(function (d) { return d ? worldChart.colors()(d) : '#99ff99';})
     .overlayGeoJson(worldJson["features"], "country", function (d) {
@@ -197,6 +214,11 @@ function makeGraphs(error, json, worldJson) {
              + "\n"
              + "Total Hits: " + total + " Hits";
     });
+
+  totalHits
+    .group(allDim.group())
+    .formatNumber(d3.format('g'))
+    .value(function(d) { return d; });
 
   timeChart
     .width(800)
@@ -218,6 +240,17 @@ function makeGraphs(error, json, worldJson) {
     .dimension(countryNameDim)
     .group(hitsByCountryName);
 
+  urlTable
+    .width(800)
+    .height(600)
+    .dimension(urlDim.group())
+    .group(function(d) {
+      return "";
+    })
+    .columns([
+      function(d) { return d.key; },
+      ])
+    .order(d3.descending);
   dc.renderAll();
 
 }
