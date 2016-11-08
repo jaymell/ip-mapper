@@ -4,5 +4,14 @@
 
 .chart-container {
   float: left;
+  margin-left: 50px;
+  margin-right: 50px;
+  margin-bottom: 50px;  
+}
+
+#url-table {
+	overflow: scroll;
+	height: 400px;
+	width: 1000px;
 }
 

@@ -106,7 +106,7 @@ function lookupIp(ip, locations, callback) {
   });
 }
 
-
+var i;
 var n;
 // build the charts
 function makeGraphs(error, json, worldJson) {
@@ -123,7 +123,7 @@ function makeGraphs(error, json, worldJson) {
       return d["ip"];
     }
   });
-
+  i = ipDim;
   var dateDim = ndx.dimension(function(d) {
     if (exists(d, "date")) {
       return d['date'];
@@ -248,8 +248,17 @@ function makeGraphs(error, json, worldJson) {
       return "";
     })
     .columns([
-      function(d) { return d.key; },
-      ])
+      {
+        label: "URL Requested",
+        format: function(d) { return d.key; }
+      },
+      {
+        label: "Count",
+        format: function(d) { return d.value; }  
+      }
+    ])
+    .size(100)
+    .sortBy(function(d) { return d.value; })
     .order(d3.descending);
   dc.renderAll();
 
