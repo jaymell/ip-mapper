@@ -106,12 +106,12 @@ function lookupIp(ip, locations, callback) {
   });
 }
 
-var i;
-var n;
+
 // build the charts
 function makeGraphs(error, json, worldJson) {
   console.log(json);
 
+  // var ndx = crossfilter(json);
   var ndx = crossfilter(json);
 
   var allDim = ndx.dimension(function(d) {
@@ -123,7 +123,7 @@ function makeGraphs(error, json, worldJson) {
       return d["ip"];
     }
   });
-  i = ipDim;
+
   var dateDim = ndx.dimension(function(d) {
     if (exists(d, "date")) {
       return d['date'];
@@ -155,8 +155,6 @@ function makeGraphs(error, json, worldJson) {
       return d["url"];
     }
   });
-
-  n = urlDim;
 
   // chart objects
   var worldChartDiv = "#world-chart";
@@ -200,9 +198,12 @@ function makeGraphs(error, json, worldJson) {
     .transitionDuration(500)
     .colors(d3.scale.quantize().range(["#ffe6e6", "#ffcccc", "#ffb3b3", 
                                        "#ff9999", "#ff8080", "#ff6666", 
-                                       "#ff4d4d", "#ff3333", "#ff1a1a", "#ff0000"]))
+                                       "#ff4d4d", "#ff3333", "#ff1a1a", 
+                                       "#ff0000"]))
     .colorDomain([0, 10])
-    .colorCalculator(function (d) { return d ? worldChart.colors()(d) : '#99ff99';})
+    .colorCalculator(function (d) { 
+      return d ? worldChart.colors()(d) : '#99ff99';
+    })
     .overlayGeoJson(worldJson["features"], "country", function (d) {
         return d.properties.iso_a2;
     })
@@ -228,6 +229,7 @@ function makeGraphs(error, json, worldJson) {
     .group(hitsByDate)
     .transitionDuration(500)
     .x(d3.time.scale().domain([minDate, maxDate]))
+    .elasticX(true)
     .elasticY(true)
     .gap(1);
   
@@ -260,6 +262,7 @@ function makeGraphs(error, json, worldJson) {
     .size(100)
     .sortBy(function(d) { return d.value; })
     .order(d3.descending);
+
   dc.renderAll();
 
 }
