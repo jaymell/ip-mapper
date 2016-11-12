@@ -7,7 +7,7 @@ d3.queue()
   .await(makeGraphs);
 
 function exists(obj, key) {
-  return typeof obj[key] !== 'undefined';
+  return key in obj;
 }
 
 // get logging data from API
@@ -156,17 +156,25 @@ function makeGraphs(error, json, worldJson) {
     }
   });
 
+  var hostDim = ndx.dimension(function(d) {
+    if (exists(d, "host")) {
+      return d["host"];
+    }
+  });
+
   // chart objects
   var worldChartDiv = "#world-chart";
   var totalHitsDiv = "#total-hits";
   var timeChartDiv = '#time-chart';
   var pieChartDiv = '#pie-chart';
   var urlTableDiv = '#url-table';
+  var hostTableDiv = '#host-table';
   var worldChart = dc.geoChoroplethChart(worldChartDiv);
   var totalHits = dc.numberDisplay(totalHitsDiv);
   var timeChart = dc.barChart(timeChartDiv);
   var pieChart = dc.pieChart(pieChartDiv);
   var urlTable = dc.dataTable(urlTableDiv);
+  var hostTable = dc.dataTable(hostTableDiv);
   var projection = d3.geo.equirectangular()
                      // .scale(50)
                      .center([0,0]);
@@ -262,6 +270,28 @@ function makeGraphs(error, json, worldJson) {
     .size(100)
     .sortBy(function(d) { return d.value; })
     .order(d3.descending);
+
+  hostTable
+    .width(800)
+    .height(600)
+    .dimension(hostDim.group())
+    .group(function(d) {
+      return "";
+    })
+    .columns([
+      {
+        label: "Host Requested",
+        format: function(d) { return d.key; }
+      },
+      {
+        label: "Count",
+        format: function(d) { return d.value; }  
+      }
+    ])
+    .size(100)
+    .sortBy(function(d) { return d.value; })
+    .order(d3.descending);
+
 
   dc.renderAll();
 

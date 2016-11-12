@@ -9,7 +9,7 @@
   margin-bottom: 50px;  
 }
 
-#url-table {
+.dc-table {
 	overflow: scroll;
 	height: 400px;
 	width: 1000px;
