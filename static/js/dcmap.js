@@ -259,7 +259,7 @@ function makeGraphs(error, json, worldJson) {
     })
     .columns([
       {
-        label: "URL Requested",
+        label: "URL",
         format: function(d) { return d.key; }
       },
       {
@@ -280,7 +280,7 @@ function makeGraphs(error, json, worldJson) {
     })
     .columns([
       {
-        label: "Host Requested",
+        label: "Host",
         format: function(d) { return d.key; }
       },
       {
