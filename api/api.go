@@ -341,15 +341,16 @@ func (api *API) getIPLocation(c *daemon.Command, r *http.Request) daemon.Respons
 	}
 
 	var ipLocation *IPLocation
+	var err error 
 
 	// attempt to get from cache:
 	log.Println("trying to read from cache")
 	ipLocation = api.cache.GetCache(ip)
-	log.Println("this is the cached ip: %s", ipLocation)
 	if ipLocation == nil {
 		log.Println("trying to get response from geolocator")
-		ipLocation, err := api.ipGeolocator.IPLocation(ip)
+		ipLocation, err = api.ipGeolocator.IPLocation(ip)
 		if err != nil {
+			log.Println("error geolocating IP")
 			return &daemon.Resp{
 				Status: http.StatusInternalServerError,
 				Result: nil,
@@ -360,6 +361,8 @@ func (api *API) getIPLocation(c *daemon.Command, r *http.Request) daemon.Respons
 		go func() {
 			_ = api.cache.PutCache(ipLocation)
 		}()
+	} else {
+	  log.Println("this is the cached ip location: %s", ipLocation)		
 	}
 	return daemon.SyncResponse(ipLocation)
 }
