@@ -26,22 +26,33 @@ function parseJson(callback) {
     
     for(var i=0; i<result.length; i++) {
       if ( exists(result[i], "x-forwarded-for") ) {
-        result[i]["ip"] = cleanIp(result[i]["x-forwarded-for"]);
+        var ip = cleanIp(result[i]["x-forwarded-for"]);
         delete result[i]["x-forwarded-for"];
       } 
       else if ( exists(result[i], "remoteAddress") ) {
         // remove extra formatting express puts in place:
-        result[i]["ip"] = cleanIp(result[i]["remoteAddress"].replace(/^.*:/, ''));
+        var ip = cleanIp(result[i]["remoteAddress"].replace(/^.*:/, ''));
         delete result[i]["remoteAddress"];
       } 
       else {
         console.log("no ip found for: ", result[i]);
         continue;
       }
+      if (ipaddr.isValid(ip)) {
+        ip = ipaddr.parse(ip);
+        // skip private and localhost addresses:
+        if (ip.range() !== 'unicast') {
+          continue;
+        }
+      } else {
+        continue;
+      }
+      result[i]["ip"] = ip.toString();
       result[i]["date"] = new Date(result[i]["date"]);
       delete result[i]["_id"];
       cleaned.push(result[i]);
     }
+
     geolocate(null, cleaned, callback);
   }
 }
@@ -56,7 +67,6 @@ function cleanIp(ip) {
   }
   return ip
 }
-
 
 // set up queue, iterate through json and 
 // pass IPs off to lookupIp for further handling
@@ -100,7 +110,7 @@ function lookupIp(ip, locations, callback) {
   // var ipLocateRoute = "/mock";
   var ipLocateRoute = "/iplocate";
   d3.json(ipLocateRoute + "?ip=" + ip, function(err, resp) {
-    if (err) callback(err);
+    if (err) return callback(null);
     locations[ip] = resp["Result"];
     callback(null);
   });
@@ -111,7 +121,6 @@ function lookupIp(ip, locations, callback) {
 function makeGraphs(error, json, worldJson) {
   console.log(json);
 
-  // var ndx = crossfilter(json);
   var ndx = crossfilter(json);
 
   var allDim = ndx.dimension(function(d) {
@@ -137,6 +146,7 @@ function makeGraphs(error, json, worldJson) {
       return d["country_iso"];
     }
   });
+
   var hitsByCountryCode = countryCodeDim.group();
 
   var countryNameDim = ndx.dimension(function(d) {
