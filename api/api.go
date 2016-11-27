@@ -85,7 +85,7 @@ func (gl *MaxMindIPGeolocator) ipLocation(ip string) (*geoip2.Response, error) {
 	// FIXME: context?
 	resp, err := gl.api.Insights(nil, ip)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get response from MaxMind")
+		return nil, err
 	}
 
 	return &resp, nil
@@ -350,7 +350,7 @@ func (api *API) getIPLocation(c *daemon.Command, r *http.Request) daemon.Respons
 		log.Println("trying to get response from geolocator")
 		ipLocation, err = api.ipGeolocator.IPLocation(ip)
 		if err != nil {
-			log.Println("error geolocating IP")
+			log.Println("error geolocating IP: ", err)
 			return &daemon.Resp{
 				Status: http.StatusInternalServerError,
 				Result: nil,
