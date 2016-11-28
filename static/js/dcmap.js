@@ -15,6 +15,22 @@ function getLogs(path, callback) {
   d3.json(path, parseJson(callback));
 }
 
+
+var fadeIn = function(el) {
+  el.style.opacity = 0;
+
+  var tick = function() {
+    el.style.opacity = +el.style.opacity + 0.01;
+
+    if (+el.style.opacity < 1) {
+      (window.requestAnimationFrame && requestAnimationFrame(tick)) || setTimeout(tick, 16)
+    }
+  };
+
+  tick();
+};
+
+
 // clean up some of the fields for easier handling later
 function parseJson(callback) {
   return function(err, json) {
@@ -334,6 +350,10 @@ function makeGraphs(error, json, worldJson) {
     .sortBy(function(d) { return d.value; })
     .order(d3.descending);
 
-  dc.renderAll();
+  var done = function() { 
+    dc.renderAll();
+    fadeIn(document.getElementById('container'));
+  }();
+
   jsTimer.end();
 }
