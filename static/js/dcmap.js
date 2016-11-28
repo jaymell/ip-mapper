@@ -1,5 +1,5 @@
-var date = new Date();
-console.log("Begin: ", date.toISOString());
+var jsTimer = timer('javscript');
+jsTimer.begin();
 
 d3.queue()
   .defer(getLogs, "/json")
@@ -71,6 +71,9 @@ function cleanIp(ip) {
 // set up queue, iterate through json and 
 // pass IPs off to lookupIp for further handling
 function geolocate(err, json, callback) {
+
+  var geoTimer = timer('geolocate');
+  geoTimer.begin();
   if (err) callback(err);
   var locations = {}; // hold responses
   var q = d3.queue();
@@ -88,7 +91,7 @@ function geolocate(err, json, callback) {
   });
   
   q.awaitAll(function(err) {
-    console.log('await function called');
+    geoTimer.end(json.length);
     if (err) callback(err);
     for(var i=0; i<json.length; i++) {
       var ip = json[i].ip;
@@ -99,7 +102,6 @@ function geolocate(err, json, callback) {
       }
     }
     var date = new Date();
-    console.log("Done geolocating: ", date.toISOString());
     callback(null, json);
   });
 }
@@ -333,5 +335,5 @@ function makeGraphs(error, json, worldJson) {
     .order(d3.descending);
 
   dc.renderAll();
-
+  jsTimer.end();
 }
