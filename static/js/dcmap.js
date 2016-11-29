@@ -16,21 +16,6 @@ function getLogs(path, callback) {
 }
 
 
-var fadeIn = function(el) {
-  el.style.opacity = 0;
-
-  var tick = function() {
-    el.style.opacity = +el.style.opacity + 0.01;
-
-    if (+el.style.opacity < 1) {
-      (window.requestAnimationFrame && requestAnimationFrame(tick)) || setTimeout(tick, 16)
-    }
-  };
-
-  tick();
-};
-
-
 // clean up some of the fields for easier handling later
 function parseJson(callback) {
   return function(err, json) {
@@ -352,7 +337,14 @@ function makeGraphs(error, json, worldJson) {
 
   var done = function() { 
     dc.renderAll();
-    fadeIn(document.getElementById('container'));
+    d3.selectAll('#loading')
+      .transition()
+      .duration(1000)
+      .style("opacity", 0);
+    d3.selectAll('.chart-container')
+      .transition()
+      .duration(1000)
+      .style('opacity', 1);  
   }();
 
   jsTimer.end();

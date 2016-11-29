@@ -4,10 +4,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dc/2.1.0-dev/dc.css">
+  <link rel="stylesheet" href="/css/loading.css">
   <link rel="stylesheet" href="/css/dcmap.css">
 </head> 
 <body>
-<div id="container" class="container-fluid" style="opacity: 0">
+<div id="container" class="container-fluid">
+<div id="loading">
+  <ul class="bokeh">
+    <li></li>
+    <li></li>
+    <li></li>
+  </ul>
+</div>
   <a href="javascript:dc.filterAll(); dc.renderAll();">Reset All Filters</a> 
   <div class="chart-container">
     <div class="heading"><h3>Request Counts by Country</h3></div>
