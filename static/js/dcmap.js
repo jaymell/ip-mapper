@@ -337,7 +337,7 @@ function makeGraphs(error, json, worldJson) {
 
   var done = function() { 
     dc.renderAll();
-    d3.selectAll('#loading')
+    d3.selectAll('#loader')
       .transition()
       .duration(1000)
       .style("opacity", 0);
