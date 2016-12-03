@@ -4,7 +4,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dc/2.1.0-dev/dc.css">
-  <link rel="stylesheet" href="/css/dcmap.css">
+  <link rel="stylesheet" href="/css/ip-mapper.css">
   <link rel="stylesheet" href="/css/loader.css">
 </head> 
 <body>
@@ -41,15 +41,15 @@
   <div class="spacer"></div>
   <div class="chart-container">
     <div class="heading"><h3>URL Requested</h3></div>
-    <div id="url-table" class="dc-chart dc-table table"></div>
+    <div id="url-table" class="dc-chart dc-table table table-hover"></div>
   </div>
   <div class="chart-container">
     <div class="heading"><h3>Host Requested</h3></div>
-    <div id="host-table" class="dc-chart dc-table table"></div>
+    <div id="host-table" class="dc-chart dc-table table table-hover"></div>
   </div>
   <div class="chart-container">
     <div class="heading"><h3>User-agent</h3></div>
-    <div id="useragent-table" class="dc-chart dc-table table"></div>
+    <div id="useragent-table" class="dc-chart dc-table table table-hover"></div>
   </div>
 
 </div>
@@ -59,7 +59,7 @@
   <script src="https://d3js.org/d3-queue.v3.min.js"></script>
   <script src="/lib/js/ipaddr.min.js"></script>
   <script src="/js/timer.js"></script>
-  <script src="/js/dcmap.js"></script>
+  <script src="/js/ip-mapper.js"></script>
 
 </body>
 </html>

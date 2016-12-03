@@ -1,10 +1,15 @@
 var jsTimer = timer('javscript');
 jsTimer.begin();
 
+// set by await function:
+var charts;
+
 d3.queue()
   .defer(getLogs, "/json")
   .defer(d3.json, "/geojson/countries.geojson")
-  .await(makeGraphs);
+  .await(function(error, json, worldJson) {
+    charts = makeCharts(error, json, worldJson)
+  });
 
 function exists(obj, key) {
   return key in obj;
@@ -119,9 +124,8 @@ function lookupIp(ip, locations, callback) {
   });
 }
 
-
 // build the charts
-function makeGraphs(error, json, worldJson) {
+function makeCharts(error, json, worldJson) {
   console.log(json);
 
   var ndx = crossfilter(json);
@@ -189,13 +193,15 @@ function makeGraphs(error, json, worldJson) {
   var urlTableDiv = '#url-table';
   var hostTableDiv = '#host-table';
   var useragentDiv = '#useragent-table';
-  var worldChart = dc.geoChoroplethChart(worldChartDiv);
-  var totalHits = dc.numberDisplay(totalHitsDiv);
-  var timeChart = dc.barChart(timeChartDiv);
-  var pieChart = dc.pieChart(pieChartDiv);
-  var urlTable = dc.dataTable(urlTableDiv);
-  var hostTable = dc.dataTable(hostTableDiv);
-  var useragentTable = dc.dataTable(useragentDiv);
+
+  var charts = {}; // this gets returned 
+  charts.worldChart = dc.geoChoroplethChart(worldChartDiv);
+  charts.totalHits = dc.numberDisplay(totalHitsDiv);
+  charts.timeChart = dc.barChart(timeChartDiv);
+  charts.pieChart = dc.pieChart(pieChartDiv);
+  charts.urlTable = dc.dataTable(urlTableDiv);
+  charts.hostTable = dc.dataTable(hostTableDiv);
+  charts.useragentTable = dc.dataTable(useragentDiv);
   var projection = d3.geo.equirectangular()
                      // .scale(50)
                      .center([0,0]);
@@ -219,7 +225,7 @@ function makeGraphs(error, json, worldJson) {
    .call(zoom);
 */
 
-  worldChart
+  charts.worldChart
     .height(500)
     .width(1000)
     .dimension(countryCodeDim)
@@ -231,7 +237,7 @@ function makeGraphs(error, json, worldJson) {
                                        "#ff0000"]))
     .colorDomain([0, 10])
     .colorCalculator(function (d) { 
-      return d ? worldChart.colors()(d) : '#99ff99';
+      return d ? charts.worldChart.colors()(d) : '#99ff99';
     })
     .overlayGeoJson(worldJson["features"], "country", function (d) {
         return d.properties.iso_a2;
@@ -245,12 +251,12 @@ function makeGraphs(error, json, worldJson) {
              + "Total Hits: " + total + " Hits";
     });
 
-  totalHits
+  charts.totalHits
     .group(allDim.group())
     .formatNumber(d3.format('g'))
     .value(function(d) { return d; });
 
-  timeChart
+  charts.timeChart
     .width(800)
     .height(160)
     .margins({top: 10, right: 50, bottom: 30, left: 50})
@@ -261,19 +267,17 @@ function makeGraphs(error, json, worldJson) {
     .elasticX(true)
     .elasticY(true)
     .gap(1);
-  
-  timeChart.yAxis().ticks(5);
-  timeChart.xUnits(d3.time.days);  // this prevents skinny "1-second" bars
 
-  pieChart
+  charts.timeChart.yAxis().ticks(5);
+  charts.timeChart.xUnits(d3.time.days);  // this prevents skinny "1-second" bars
+
+  charts.pieChart
     .height(300)
     .width(300)
     .dimension(countryNameDim)
     .group(hitsByCountryName);
 
-  urlTable
-    .width(800)
-    .height(600)
+  charts.urlTable
     .dimension(urlDim.group())
     .group(function(d) {
       return "";
@@ -292,9 +296,7 @@ function makeGraphs(error, json, worldJson) {
     .sortBy(function(d) { return d.value; })
     .order(d3.descending);
 
-  hostTable
-    .width(800)
-    .height(600)
+  charts.hostTable
     .dimension(hostDim.group())
     .group(function(d) {
       return "";
@@ -314,9 +316,7 @@ function makeGraphs(error, json, worldJson) {
     .order(d3.descending);
 
 
-  useragentTable
-    .width(800)
-    .height(600)
+  charts.useragentTable
     .dimension(useragentDim.group())
     .group(function(d) {
       return "";
@@ -334,6 +334,7 @@ function makeGraphs(error, json, worldJson) {
     .size(100)
     .sortBy(function(d) { return d.value; })
     .order(d3.descending);
+  
 
   var done = function() { 
     dc.renderAll();
@@ -348,4 +349,6 @@ function makeGraphs(error, json, worldJson) {
   }();
 
   jsTimer.end();
+
+  return charts;
 }
