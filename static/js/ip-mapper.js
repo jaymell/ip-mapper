@@ -126,7 +126,7 @@ function lookupIp(ip, locations, callback) {
 
 // build the charts
 function makeCharts(error, json, worldJson) {
-  console.log(json);
+  //console.log(json);
 
   var ndx = crossfilter(json);
 
@@ -284,12 +284,12 @@ function makeCharts(error, json, worldJson) {
     })
     .columns([
       {
-        label: "URL",
-        format: function(d) { return d.key; }
-      },
-      {
         label: "Count",
         format: function(d) { return d.value; }  
+      },
+      {
+        label: "URL",
+        format: function(d) { return d.key; }
       }
     ])
     .size(100)
@@ -303,12 +303,12 @@ function makeCharts(error, json, worldJson) {
     })
     .columns([
       {
-        label: "Host",
-        format: function(d) { return d.key; }
-      },
-      {
         label: "Count",
         format: function(d) { return d.value; }  
+      },
+      {
+        label: "Host",
+        format: function(d) { return d.key; }
       }
     ])
     .size(100)
@@ -323,13 +323,14 @@ function makeCharts(error, json, worldJson) {
     })
     .columns([
       {
-        label: "User-agent String",
-        format: function(d) { return d.key; }
-      },
-      {
         label: "Count",
         format: function(d) { return d.value; }
+      },
+      {
+        label: "User-agent String",
+        format: function(d) { return d.key; }
       }
+
     ])
     .size(100)
     .sortBy(function(d) { return d.value; })

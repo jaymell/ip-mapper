@@ -8,11 +8,10 @@
   margin-right: 50px;
   margin-bottom: 50px;  
   opacity: 0;
+  /*visibility: visible;*/
 }
 
 .dc-table {
 	overflow: scroll;
 	height: 300px;
-/*	width: 1000px;
-*/}
-
+}
