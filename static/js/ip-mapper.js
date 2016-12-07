@@ -126,60 +126,62 @@ function lookupIp(ip, locations, callback) {
 
 // build the charts
 function makeCharts(error, json, worldJson) {
-  //console.log(json);
 
-  var ndx = crossfilter(json);
+  var charts = {}; // this gets returned 
 
-  var allDim = ndx.dimension(function(d) {
+  charts.ndx = crossfilter(json);
+
+  charts.allDim = charts.ndx.dimension(function(d) {
     return d;
   })
 
-  var ipDim = ndx.dimension(function(d) { 
+  charts.ipDim = charts.ndx.dimension(function(d) { 
     if (exists(d, "ip")) { 
       return d["ip"];
     }
   });
 
-  var dateDim = ndx.dimension(function(d) {
+  charts.dateDim = charts.ndx.dimension(function(d) {
     if (exists(d, "date")) {
       return d['date'];
     }
   });
-  var minDate = dateDim.bottom(1)[0]["date"];
-  var maxDate = dateDim.top(1)[0]["date"];
 
-  var countryCodeDim = ndx.dimension(function(d) {
+  charts.getMinDate = function() { return charts.dateDim.bottom(1)[0]["date"]; }
+  charts.getMaxDate = function() { return charts.dateDim.top(1)[0]["date"]; }
+
+  charts.countryCodeDim = charts.ndx.dimension(function(d) {
     if (exists(d,"country_iso")) {
       return d["country_iso"];
     }
   });
 
-  var hitsByCountryCode = countryCodeDim.group();
+  charts.hitsByCountryCode = charts.countryCodeDim.group();
 
-  var countryNameDim = ndx.dimension(function(d) {
+  charts.countryNameDim = charts.ndx.dimension(function(d) {
     if (exists(d,"country")) {
       return d["country"];
     }
   })
-  var hitsByCountryName = countryNameDim.group();
+  charts.hitsByCountryName = charts.countryNameDim.group();
     
-  var hitsByDate = dateDim.group(function(d) {
-    return d3.time.day(d);
+  charts.hitsByDate = charts.dateDim.group(function(d) {
+    return d3.time.hour(d);
   });
 
-  var urlDim = ndx.dimension(function(d) {
+  charts.urlDim = charts.ndx.dimension(function(d) {
     if (exists(d, "url")) {
       return d["url"];
     }
   });
 
-  var hostDim = ndx.dimension(function(d) {
+  charts.hostDim = charts.ndx.dimension(function(d) {
     if (exists(d, "host")) {
       return d["host"];
     }
   });
 
-  var useragentDim = ndx.dimension(function(d) {
+  charts.useragentDim = charts.ndx.dimension(function(d) {
     if(exists(d, "user-agent")) {
       return d["user-agent"];
     }
@@ -194,10 +196,9 @@ function makeCharts(error, json, worldJson) {
   var hostTableDiv = '#host-table';
   var useragentDiv = '#useragent-table';
 
-  var charts = {}; // this gets returned 
   charts.worldChart = dc.geoChoroplethChart(worldChartDiv);
   charts.totalHits = dc.numberDisplay(totalHitsDiv);
-  charts.timeChart = dc.barChart(timeChartDiv);
+  charts.timeChart = dc.lineChart(timeChartDiv);
   charts.pieChart = dc.pieChart(pieChartDiv);
   charts.urlTable = dc.dataTable(urlTableDiv);
   charts.hostTable = dc.dataTable(hostTableDiv);
@@ -228,8 +229,8 @@ function makeCharts(error, json, worldJson) {
   charts.worldChart
     .height(500)
     .width(1000)
-    .dimension(countryCodeDim)
-    .group(hitsByCountryCode)
+    .dimension(charts.countryCodeDim)
+    .group(charts.hitsByCountryCode)
     .transitionDuration(500)
     .colors(d3.scale.quantize().range(["#ffe6e6", "#ffcccc", "#ffb3b3", 
                                        "#ff9999", "#ff8080", "#ff6666", 
@@ -251,22 +252,38 @@ function makeCharts(error, json, worldJson) {
              + "Total Hits: " + total + " Hits";
     });
 
+
   charts.totalHits
-    .group(allDim.group())
+    .group(charts.allDim.group())
     .formatNumber(d3.format('g'))
     .value(function(d) { return d; });
+    
+  // use this if want to potentially remove 0
+  // values to allow x-axis resizing (though it skews data,
+  // b/c it will always look like at least one hit)
+  // function remove_empty_bins(source_group) {
+  //     return {
+  //         all: function () {
+  //             return source_group.all().filter(function (d) {
+  //                 console.log('this: ', d)
+  //                 return d.value !== 0;
+  //             });
+  //         }
+  //     };
+  // }
+  // charts.hitsByDate = remove_empty_bins(charts.hitsByDate);
 
   charts.timeChart
     .width(800)
     .height(160)
     .margins({top: 10, right: 50, bottom: 30, left: 50})
-    .dimension(dateDim)
-    .group(hitsByDate)
-    .transitionDuration(500)
-    .x(d3.time.scale().domain([minDate, maxDate]))
+    .dimension(charts.dateDim)
+    .group(charts.hitsByDate)
+    .transitionDuration(100)
     .elasticX(true)
-    .elasticY(true)
-    .gap(1);
+    .elasticY(true)    
+    .x(d3.time.scale().domain([charts.getMinDate(), charts.getMaxDate()]))
+    // .gap(1);
 
   charts.timeChart.yAxis().ticks(5);
   charts.timeChart.xUnits(d3.time.days);  // this prevents skinny "1-second" bars
@@ -274,11 +291,12 @@ function makeCharts(error, json, worldJson) {
   charts.pieChart
     .height(300)
     .width(300)
-    .dimension(countryNameDim)
-    .group(hitsByCountryName);
+    .dimension(charts.countryNameDim)
+    .group(charts.hitsByCountryName);
+
 
   charts.urlTable
-    .dimension(urlDim.group())
+    .dimension(charts.urlDim.group())
     .group(function(d) {
       return "";
     })
@@ -296,8 +314,9 @@ function makeCharts(error, json, worldJson) {
     .sortBy(function(d) { return d.value; })
     .order(d3.descending);
 
+
   charts.hostTable
-    .dimension(hostDim.group())
+    .dimension(charts.hostDim.group())
     .group(function(d) {
       return "";
     })
@@ -317,7 +336,7 @@ function makeCharts(error, json, worldJson) {
 
 
   charts.useragentTable
-    .dimension(useragentDim.group())
+    .dimension(charts.useragentDim.group())
     .group(function(d) {
       return "";
     })
