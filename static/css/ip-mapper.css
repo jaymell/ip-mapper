@@ -11,7 +11,13 @@
   /*visibility: visible;*/
 }
 
+.dc-table-column {
+  width: 600px;
+}
+
 .dc-table {
 	overflow: scroll;
 	height: 300px;
 }
+
+
