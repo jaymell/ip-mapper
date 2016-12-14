@@ -261,16 +261,21 @@ function makeCharts(error, json, worldJson) {
   // use this if want to potentially remove 0
   // values to allow x-axis resizing (though it skews data,
   // b/c it will always look like at least one hit)
-  // function remove_empty_bins(source_group) {
-  //     return {
-  //         all: function () {
-  //             return source_group.all().filter(function (d) {
-  //                 console.log('this: ', d)
-  //                 return d.value !== 0;
-  //             });
-  //         }
-  //     };
-  // }
+  function remove_empty_bins(source_group) {
+      function non_zero_pred(d) {
+          return d.value != 0;
+      }
+      return {
+          all: function () {
+              return source_group.all().filter(non_zero_pred);
+          },
+          top: function(n) {
+              return source_group.top(Infinity)
+                  .filter(non_zero_pred)
+                  .slice(0, n);
+          }
+      };
+  }
   // charts.hitsByDate = remove_empty_bins(charts.hitsByDate);
 
   charts.timeChart
@@ -296,7 +301,7 @@ function makeCharts(error, json, worldJson) {
 
 
   charts.urlTable
-    .dimension(charts.urlDim.group())
+    .dimension(remove_empty_bins(charts.urlDim.group()))
     .group(function(d) {
       return "";
     })
@@ -316,7 +321,7 @@ function makeCharts(error, json, worldJson) {
 
 
   charts.hostTable
-    .dimension(charts.hostDim.group())
+    .dimension(remove_empty_bins(charts.hostDim.group()))
     .group(function(d) {
       return "";
     })
@@ -336,7 +341,7 @@ function makeCharts(error, json, worldJson) {
 
 
   charts.useragentTable
-    .dimension(charts.useragentDim.group())
+    .dimension(remove_empty_bins(charts.useragentDim.group()))
     .group(function(d) {
       return "";
     })
