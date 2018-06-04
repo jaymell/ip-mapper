@@ -1,8 +1,6 @@
 package com.jaymell.ipmapper
 
-import com.mongodb.DB
-import com.mongodb.DBCollection
-import com.mongodb.DBObject
+import com.mongodb.*
 import com.mongodb.client.MongoCursor
 import org.bson.Document
 import org.springframework.boot.autoconfigure.SpringBootApplication
@@ -12,15 +10,22 @@ import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
 import org.springframework.data.mongodb.core.MongoTemplate
-import com.mongodb.MongoClient
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
+import org.springframework.data.mongodb.MongoDbFactory
+import org.springframework.data.mongodb.core.MongoClientFactoryBean
+import org.springframework.data.mongodb.core.findAll
 
-
+/*
 @Configuration
 class AppConfig {
+    @Bean
+    fun mongo(): MongoClientFactoryBean {
+        val mongo = MongoClientFactoryBean()
 
+    }
     val mongo = MongoClient("localhost", 27017)
     val dbName = "logger"
     val colName = "logs"
@@ -37,6 +42,7 @@ class AppConfig {
     @Bean
     fun collection(): MongoCollection<Document> = db().getCollection(colName)
 }
+*/
 
 @SpringBootApplication
 class IpmapperApplication
@@ -47,20 +53,19 @@ fun main(args: Array<String>) {
 
 @Controller
 class JsonController {
+
+    @Autowired
+    private lateinit var mongo: MongoClient
+
     @RequestMapping("/json")
     fun handleRequest(): StreamingResponseBody =
             StreamingResponseBody {
                 val out = it
-//                val template = AppConfig().mongoTemplate()
-//                val results = template.findAll(DBObject::class.java, "logs")
-                val col = AppConfig().collection()
-                val cursor: MongoCursor<Document> = col.find().iterator()
-                cursor.forEach {
-                    out.write(it.toString().toByteArray(charset("UTF-8")))
-                }
-//                results.forEach {
-//                    out.write(it.toString().toByteArray(charset("UTF-8")))
-//                }
+                val template = MongoTemplate(mongo, "logger")
+                val results: List<Document> = template.findAll("logs")
+                results.forEach{
+                            out.write(it.toString().toByteArray(charset("UTF-8")))
+                        }
             }
 }
 
