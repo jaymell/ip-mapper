@@ -28,7 +28,7 @@ class JsonController {
                 val template = MongoTemplate(mongo, "logger")
                 val col = template.getCollection("logs")
                 col.find().iterator().forEach {
-                    out.write(it.toJson().toByteArray())
+                    out.write("${it.toJson()}\n".toByteArray())
                 }
             }
 }
