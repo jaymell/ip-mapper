@@ -36,7 +36,7 @@ fun queryMongoByDate(template: MongoTemplate, colName: String, lteParam: Long?, 
 
     val query = Query().addCriteria(criteria)
 
-    template.find<Document>(query, colName).iterator()
+    return template.find<Document>(query, colName).iterator()
 }
 
 @Controller
@@ -45,13 +45,14 @@ class JsonController {
     @Autowired
     private lateinit var mongo: MongoClient
 
+    val dbName = "logger"
     val colName = "logs"
 
     @RequestMapping("/json", method = [RequestMethod.GET])
     fun handleRequest(@RequestParam(value = "gte", required = false) gteParam: Long?,
                       @RequestParam(value = "lte", required = false) lteParam: Long?): StreamingResponseBody {
 
-        val template = MongoTemplate(mongo, "logger")
+        val template = MongoTemplate(mongo, dbName)
 
         return StreamingResponseBody { out ->
             queryMongoByDate(template, colName, lteParam, gteParam)
