@@ -1,11 +1,42 @@
 var jsTimer = timer('javscript');
 jsTimer.begin();
 
+/*
+const http = require('http');
+const jsonlines = require('jsonlines');
+
+function getLogs(path, callback) {
+
+  const parser = jsonlines.parse();
+
+  http.get(path, resp => {
+    resp.pipe(parser);
+  });
+
+  const arr = [];
+  parser.on('data', d => arr.push(d));
+  parser.on('end', callback(null, arr));
+  parser.on('error', callback(e));
+}
+
+getLogs("http://localhost:8080/json?gte=1498848968000", (e, d) => {
+  console.log('e: ', e);
+  console.log('d: ', d);
+});
+
+
+
+const parser = jsonlines.parse();
+http.get('http://localhost:8080/json?gte=1', resp => {
+  resp.pipe(parser);
+});
+*/
+
 // set by await function:
 var charts;
 
 d3.queue()
-  .defer(getLogs, "/json")
+  .defer(getLogs, "/json?gte=1498848968000")
   .defer(d3.json, "/geojson/countries.geojson")
   .await(function(error, json, worldJson) {
     charts = makeCharts(error, json, worldJson)

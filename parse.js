@@ -1,4 +1,7 @@
+const jsonlines = require('jsonlines');
+
 var jsTimer = timer('javscript');
+
 jsTimer.begin();
 
 // set by await function:
@@ -17,6 +20,11 @@ function exists(obj, key) {
 
 // get logging data from API
 function getLogs(path, callback) {
+  const parser = jsonlines.parse();
+  http.request(path, (res) => {
+    res.pipe(parser);
+  });
+
   d3.json(path, parseJson(callback));
 }
 
