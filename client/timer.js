@@ -1,7 +1,7 @@
-timer = function(label) {
+function timer(label) {
   return function() {
     var begin;
-    var end; 
+    var end;
 
     return {
       begin: function() {
@@ -25,3 +25,5 @@ timer = function(label) {
     }
   }();
 };
+
+module.exports = timer;
