@@ -6,6 +6,7 @@ config.daemon.json
 /build/
 !gradle/wrapper/gradle-wrapper.jar
 node_modules
+run.sh
 
 ### STS ###
 .apt_generated
@@ -30,3 +31,4 @@ node_modules
 /dist/
 /nbdist/
 /.nb-gradle/
+

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha --require babel-polyfill --require babel-core/register",
-    "build": "browserify client/index.js > static/js/bundle.js",
+    "build": "browserify index.js > ../static/js/bundle.js",
     "buildugly": "browserify client/index.js | uglifyjs --screw-ie8 -c=dead_code,evaluate,loops,unused > static/js/bundle.js"
   },
   "repository": {
