@@ -4,6 +4,8 @@ import com.mongodb.MongoClient
 import mu.KLogging
 import mu.KotlinLogging
 import org.bson.Document
+import org.bson.json.JsonMode
+import org.bson.json.JsonWriterSettings
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
@@ -67,7 +69,7 @@ class JsonController {
         return StreamingResponseBody { out ->
             queryMongoByDate(template, colName, lteParam, gteParam)
                     .forEach {
-                        out.write("${it.toJson()}\n".toByteArray())
+                        out.write("${com.mongodb.util.JSON.serialize(it)}\n".toByteArray())
                     }
         }
     }

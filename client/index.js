@@ -1,77 +1,85 @@
-const timer = require('./timer.js');
-const jsTimer = timer('javscript');
+const Promise = require('bluebird');
 const d3 = require('d3');
-const dc = require('d3');
+const geo = require('d3-geo');
+const scale = require('d3-scale');
+const dc = require('dc');
+const queue = require('d3-queue');
 const crossfilter = require('crossfilter');
 const http = require('http');
 const jsonlines = require('jsonlines');
-const q = require('d3-queue');
+const ipaddr = require('ipaddr.js');
+const _ = require('lodash');
+const geoJson = require('./countries.geojson.json');
+const timer = require('./timer.js');
+
+const jsTimer = timer('javscript');
 
 function exists(obj, key) {
-  return key in obj;
+  return ( ! _.isNil(obj[key]) )
 }
 
-function getLogs(path, callback) {
+function existsArr(obj, keys) {
+  return _.chain(keys)
+    .map(it => exists(obj, it) ? it : undefined)
+    .filter(it => !_.isUndefined(it))
+    .value()
+}
 
-  const parser = jsonlines.parse();
+function getLogs(path) {
+  return new Promise((res, rej) => {
+    const parser = jsonlines.parse();
 
-  http.get(path, resp => {
-    resp.pipe(parser);
+    http.get(path, resp => {
+      resp.pipe(parser);
+    });
+
+    const arr = [];
+
+    parser.on('data', d => {
+      arr.push(d)
+    });
+
+    parser.on('end', () => {
+      console.log(`length of json: ${arr.length}`)
+      return res(arr);
+    });
+
+    parser.on('error', e => {
+      return rej(e);
+    });
   });
-
-  const arr = [];
-  parser.on('data', d => arr.push(d));
-  parser.on('end', () => callback(null, arr));
-  parser.on('error', () => callback(e));
 }
 
 // clean up some of the fields for easier handling later
-function parseJson(callback) {
-  return function(err, json) {
-    if (err) callback(err);
-    if (json['Status'] !== 200) callback(null);
+function cleanup(json) {
+    return _.chain(json)
+        // convert to pair, 1st element is containing keys (maybe empty), 2nd is it:
+        .map(it => [ existsArr(it, ["x-forwarded-for", "remoteAddress"]), it ] )
+        // remove empties:
+        .filter(pair => ! _.isEmpty(pair[0]))
+        // cleanIp on each found ip field and clean up other fields:
+        .map(pair => {
+            let [ keys, it ] = pair;
+            _.forEach(keys, k => {
+                it[k] = cleanIp(it[k]);
+                if ( ! ipaddr.isValid(it[k]) || ipaddr.parse(it[k]).range() !== 'unicast' ) {
+                    delete it[k]
+                } else {
+                    it[k] = it[k].toString();
+                }
+            })
 
-    var result = json.Result;
-    var cleaned = [];
-
-    for(var i=0; i<result.length; i++) {
-      if ( exists(result[i], "x-forwarded-for") ) {
-        var ip = cleanIp(result[i]["x-forwarded-for"]);
-        delete result[i]["x-forwarded-for"];
-      }
-      else if ( exists(result[i], "remoteAddress") ) {
-        // remove extra formatting express puts in place:
-        var ip = cleanIp(result[i]["remoteAddress"].replace(/^.*:/, ''));
-        delete result[i]["remoteAddress"];
-      }
-      else {
-        console.log("no ip found for: ", result[i]);
-        continue;
-      }
-      if (ipaddr.isValid(ip)) {
-        ip = ipaddr.parse(ip);
-        // skip private and localhost addresses:
-        if (ip.range() !== 'unicast') {
-          continue;
-        }
-      } else {
-        continue;
-      }
-      result[i]["ip"] = ip.toString();
-      result[i]["date"] = new Date(result[i]["date"]);
-      delete result[i]["_id"];
-      cleaned.push(result[i]);
-    }
-
-    geolocate(null, cleaned, callback);
-  }
+            it.date = new Date(it.date.$date);
+            delete it._id;
+            return it;
+        })
+        .value();
 }
-
 
 // get first ip from comma-sep'd list of ips;
 // may want these later but for now just complicate things
 function cleanIp(ip) {
-  idx = ip.indexOf(",")
+  const idx = ip.indexOf(",")
   if (idx > -1) {
     return ip.slice(0, idx);
   }
@@ -80,13 +88,14 @@ function cleanIp(ip) {
 
 // set up queue, iterate through json and
 // pass IPs off to lookupIp for further handling
+// FIXME: convert this to promises:
 function geolocate(err, json, callback) {
 
   var geoTimer = timer('geolocate');
   geoTimer.begin();
   if (err) callback(err);
   var locations = {}; // hold responses
-  var q = q.queue();
+  var q = queue.queue();
 
   var date = new Date();
   console.log("Start geolocating: ", date.toISOString());
@@ -118,6 +127,7 @@ function geolocate(err, json, callback) {
 
 
 // call api for lookups, avoiding duplicate calls
+// FIXME: promisify this
 function lookupIp(ip, locations, callback) {
   // var ipLocateRoute = "/mock";
   var ipLocateRoute = "/iplocate";
@@ -129,7 +139,7 @@ function lookupIp(ip, locations, callback) {
 }
 
 // build the charts
-function makeCharts(error, json, worldJson) {
+function makeCharts(json, worldJson) {
 
   var charts = {}; // this gets returned
 
@@ -207,7 +217,7 @@ function makeCharts(error, json, worldJson) {
   charts.urlTable = dc.dataTable(urlTableDiv);
   charts.hostTable = dc.dataTable(hostTableDiv);
   charts.useragentTable = dc.dataTable(useragentDiv);
-  var projection = d3.geo.equirectangular()
+  var projection = geo.geoEquirectangular()
                      // .scale(50)
                      .center([0,0]);
 
@@ -236,7 +246,7 @@ function makeCharts(error, json, worldJson) {
     .dimension(charts.countryCodeDim)
     .group(charts.hitsByCountryCode)
     .transitionDuration(500)
-    .colors(d3.scale.quantize().range(["#ffe6e6", "#ffcccc", "#ffb3b3",
+    .colors(scale.scaleQuantize().range(["#ffe6e6", "#ffcccc", "#ffb3b3",
                                        "#ff9999", "#ff8080", "#ff6666",
                                        "#ff4d4d", "#ff3333", "#ff1a1a",
                                        "#ff0000"]))
@@ -382,17 +392,17 @@ function makeCharts(error, json, worldJson) {
   return charts;
 }
 
-function main() {
+async function main() {
   jsTimer.begin();
-
-  var charts;
-  q.queue()
-    .defer(getLogs, "/json?gte=1525156758000")
-    .defer(d3.json, "/geojson/countries.geojson")
-    .await(function(error, json, worldJson) {
-      charts = makeCharts(error, json, worldJson)
-    });
-
+  const logs = await getLogs("/json?gte=1525156758000");
+  const json = cleanup(logs);
+  //const geolocated = geolocate(cleaned, callback);
+  //makeCharts(geolocated, geoJson);
+  //makeCharts(json, geoJson);
 }
 
 main();
+
+module.exports = {
+    cleanup: cleanup
+};

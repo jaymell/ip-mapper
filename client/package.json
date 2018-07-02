@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "mocha --require babel-polyfill --require babel-core/register",
     "build": "browserify client/index.js > static/js/bundle.js",
     "buildugly": "browserify client/index.js | uglifyjs --screw-ie8 -c=dead_code,evaluate,loops,unused > static/js/bundle.js"
   },
@@ -21,20 +21,27 @@
   "devDependencies": {
     "babel-cli": "^6.26.0",
     "babel-loader": "^7.1.4",
+    "babel-plugin-transform-async-to-generator": "^6.24.1",
     "babel-polyfill": "^6.26.0",
     "babel-preset-es2015": "^6.24.1",
     "babel-preset-stage-0": "^6.24.1",
     "babelify": "^8.0.0",
     "browserify": "^16.2.2",
+    "mocha": "^5.2.0",
     "uglify": "^0.1.5",
     "watchify": "^3.11.0"
   },
   "dependencies": {
+    "babel-plugin-transform-regenerator": "^6.26.0",
+    "bluebird": "^3.5.1",
     "crossfilter": "^1.3.12",
     "d3": "^5.5.0",
+    "d3-geo": "^1.10.0",
     "d3-queue": "^3.0.7",
+    "d3-scale": "^2.1.0",
     "dc": "^2.2.0",
     "ipaddr.js": "^1.7.0",
-    "jsonlines": "^0.1.1"
+    "jsonlines": "^0.1.1",
+    "lodash": "^4.17.10"
   }
 }
