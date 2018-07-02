@@ -1,27 +1,22 @@
 package com.jaymell.ipmapper
 
-import com.mongodb.MongoClient
-import mu.KLogging
-import mu.KotlinLogging
-import org.bson.Document
-import org.bson.json.JsonMode
-import org.bson.json.JsonWriterSettings
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
-import org.springframework.data.mongodb.core.MongoTemplate
-import org.springframework.data.mongodb.core.find
-import org.springframework.data.mongodb.core.query.Criteria
-import org.springframework.data.mongodb.core.query.Query
-import org.springframework.stereotype.Controller
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestMethod
-import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneOffset
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+
+@Configuration
+class AppConfig {
+    @Value("\${maxmind.key}")
+    lateinit var maxmindKey: String
+
+    @Value("\${maxmind.accountId}")
+    lateinit var maxmindAccountId: String
+
+    @Bean
+    fun geolocator(): MaxmindGeolocator = MaxmindGeolocator(maxmindAccountId, maxmindKey)
+}
 
 @SpringBootApplication
 class IpmapperApplication

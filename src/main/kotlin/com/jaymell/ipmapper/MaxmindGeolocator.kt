@@ -1,7 +1,17 @@
 package com.jaymell.ipmapper
 
-class MaxmindGeolocator : Geolocator {
+import com.maxmind.geoip2.WebServiceClient
+import java.net.InetAddress
+
+class MaxmindGeolocator(val maxmindAccountId: String, val maxmindKey: String) : Geolocator {
+
+    val client = WebServiceClient.Builder(maxmindAccountId, maxmindKey).build()
+
     override fun geolocate(ip: String): IpLocation {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val ipAddress = InetAddress.getByName(ip)
+        val resp = client.insights(ipAddress)
+        return IpLocation()
+
+        return
     }
 }
