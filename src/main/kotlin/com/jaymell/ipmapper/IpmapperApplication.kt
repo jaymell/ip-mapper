@@ -15,7 +15,7 @@ class AppConfig {
     lateinit var maxmindAccountId: String
 
     @Bean
-    fun geolocator(): MaxmindGeolocator = MaxmindGeolocator(maxmindAccountId, maxmindKey)
+    fun geolocator(): MaxmindGeolocator = MaxmindGeolocator(maxmindAccountId.toInt(), maxmindKey)
 }
 
 @SpringBootApplication

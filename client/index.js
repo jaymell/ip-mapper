@@ -11,6 +11,7 @@ const ipaddr = require('ipaddr.js');
 const _ = require('lodash');
 const geoJson = require('./countries.geojson.json');
 const timer = require('./timer.js');
+const rp = require('request-promise');
 
 const jsTimer = timer('javscript');
 
@@ -52,90 +53,58 @@ function getLogs(path) {
 
 // clean up some of the fields for easier handling later
 function cleanup(json) {
-    return _.chain(json)
-        // convert to pair, 1st element is containing keys (maybe empty), 2nd is it:
-        .map(it => [ existsArr(it, ["x-forwarded-for", "remoteAddress"]), it ] )
-        // remove empties:
-        .filter(pair => ! _.isEmpty(pair[0]))
-        // cleanIp on each found ip field and clean up other fields:
-        .map(pair => {
-            let [ keys, it ] = pair;
-            _.forEach(keys, k => {
-                it[k] = cleanIp(it[k]);
-                if ( ! ipaddr.isValid(it[k]) || ipaddr.parse(it[k]).range() !== 'unicast' ) {
-                    delete it[k]
-                } else {
-                    it[k] = it[k].toString();
-                }
-            })
-
-            it.date = new Date(it.date.$date);
-            delete it._id;
-            return it;
-        })
-        .value();
+  const keys = ["x-forwarded-for", "remoteAddress"];
+  return _.chain(json)
+    .map(it => {
+      _.forEach(keys, k => {
+        if ( exists(it, k) ) {
+          it[k] = cleanIp(it[k]);
+          if ( ( ! ipaddr.isValid(it[k]) ) || ipaddr.parse(it[k]).range() !== 'unicast' ) {
+            delete it[k]
+          } else {
+            it[k] = it[k].toString();
+          }
+        }
+      });
+      if (exists(it, 'date')) {
+        it.date = new Date(it.date.$date);
+      }
+      delete it._id;
+      return it;
+    })
+    // convert to pair, 1st element is containing keys (maybe empty), 2nd is it:
+    .map(it => [ existsArr(it, keys), it ] )
+    // remove empties:
+    .filter(pair => ( ! _.isEmpty(pair[0])) )
+    // cleanIp on each found ip field and set first to 'ip' key and clean up other fields:
+    .map(pair => {
+      let [keys, it] = pair;
+      it.ip  = it[keys[0]];
+      return it;
+    })
+    .value();
 }
 
 // get first ip from comma-sep'd list of ips;
 // may want these later but for now just complicate things
 function cleanIp(ip) {
-  const idx = ip.indexOf(",")
-  if (idx > -1) {
-    return ip.slice(0, idx);
-  }
-  return ip
+  const idxComma = ip.indexOf(",");
+  const singleIp = idxComma > -1 ? ip.slice(0, idxComma) : ip;
+  const idxColon = singleIp.lastIndexOf(":");
+  const cleanedIp = idxColon > -1 ? singleIp.slice(idxColon+1) : singleIp
+  return cleanedIp;
 }
 
-// set up queue, iterate through json and
-// pass IPs off to lookupIp for further handling
-// FIXME: convert this to promises:
-function geolocate(err, json, callback) {
-
-  var geoTimer = timer('geolocate');
-  geoTimer.begin();
-  if (err) callback(err);
-  var locations = {}; // hold responses
-  var q = queue.queue();
-
-  var date = new Date();
-  console.log("Start geolocating: ", date.toISOString());
-  json.forEach(function(item) {
-    var ip = item.ip;
-    if (ip in locations) {
-      console.log("duplicate -- skipping");
-      return;
-    }
-      locations[ip] = null;
-      q.defer(lookupIp, ip, locations);
-  });
-
-  q.awaitAll(function(err) {
-    geoTimer.end(json.length);
-    if (err) callback(err);
-    for(var i=0; i<json.length; i++) {
-      var ip = json[i].ip;
-      if (exists(locations, ip) && locations.ip !== null) {
-        Object.keys(locations[ip]).forEach(function(item) {
-          json[i][item] = locations[ip][item];
-        });
-      }
-    }
-    var date = new Date();
-    callback(null, json);
-  });
-}
-
-
-// call api for lookups, avoiding duplicate calls
-// FIXME: promisify this
-function lookupIp(ip, locations, callback) {
-  // var ipLocateRoute = "/mock";
-  var ipLocateRoute = "/iplocate";
-  d3.json(ipLocateRoute + "?ip=" + ip, function(err, resp) {
-    if (err) return callback(null);
-    locations[ip] = resp["Result"];
-    callback(null);
-  });
+function geolocate(ip) {
+  const ipLocateRoute = "/geolocate";
+  return new Promise((res, rej) => {
+    http.get(ipLocateRoute + "?ip=" + ip, resp => {
+      var result;
+      resp.on('data', d => result = d);
+      resp.on('error', e => rej(e));
+      resp.on('end', () => res(result));
+    })
+  })
 }
 
 // build the charts
@@ -143,6 +112,7 @@ function makeCharts(json, worldJson) {
 
   var charts = {}; // this gets returned
 
+  console.log('got this json: ', json);
   charts.ndx = crossfilter(json);
 
   charts.allDim = charts.ndx.dimension(function(d) {
@@ -394,15 +364,21 @@ function makeCharts(json, worldJson) {
 
 async function main() {
   jsTimer.begin();
-  const logs = await getLogs("/json?gte=1525156758000");
+  const logs = await getLogs("/json?gte=1527548400000");
   const json = cleanup(logs);
-  //const geolocated = geolocate(cleaned, callback);
-  //makeCharts(geolocated, geoJson);
-  //makeCharts(json, geoJson);
+  global_json = json;
+  const geolocated = await Promise.all(json.map(async(it) => _.assign({}, it, await geolocate(it.ip))));
+  console.log('geolocated: ', geolocated);
+  global_geolocated = geolocated;
+  // console.log('geojson: ', geoJson);
+  // makeCharts(geolocated, geoJson);
 }
 
 main();
 
 module.exports = {
-    cleanup: cleanup
+    cleanup: cleanup,
+    cleanIp: cleanIp,
+    exists: exists,
+    existsArr: existsArr
 };

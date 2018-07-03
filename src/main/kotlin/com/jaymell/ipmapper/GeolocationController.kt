@@ -17,6 +17,11 @@ class GeolocationController {
 
     @RequestMapping("/geolocate", produces = ["application/json"])
     fun handleRequest(@RequestParam ip: String): ResponseEntity<String> {
-        return ResponseEntity<String>(geolocator.geolocate(ip).toString(), HttpStatus.OK)
+        try {
+           val ipLocation = geolocator.geolocate(ip).toString()
+           return ResponseEntity<String>(ipLocation, HttpStatus.OK)
+        } catch (e: InvalidIpLocationException) {
+            return ResponseEntity<String>("", HttpStatus.BAD_REQUEST)
+        }
     }
 }
