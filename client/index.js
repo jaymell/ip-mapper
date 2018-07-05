@@ -11,7 +11,6 @@ const ipaddr = require('ipaddr.js');
 const _ = require('lodash');
 const geoJson = require('./countries.geojson.json');
 const timer = require('./timer.js');
-const rp = require('request-promise');
 
 const jsTimer = timer('javscript');
 
@@ -371,7 +370,7 @@ async function main() {
   console.log('geolocated: ', geolocated);
   global_geolocated = geolocated;
   // console.log('geojson: ', geoJson);
-  // makeCharts(geolocated, geoJson);
+  makeCharts(geolocated, geoJson);
 }
 
 main();

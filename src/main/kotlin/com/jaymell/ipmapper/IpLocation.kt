@@ -12,6 +12,6 @@ data class IpLocation(
     val city: String?,
     val country: String?) {
 
-    override fun toString(): String = "ip: $ip, latitude: $latitude, longitude: $longitude, countryCode: $countryCode, city: $city, country: $country"
+//    override fun toString(): String = "ip: $ip, latitude: $latitude, longitude: $longitude, countryCode: $countryCode, city: $city, country: $country"
 }
 

@@ -1,5 +1,6 @@
 package com.jaymell.ipmapper
 
+import com.fasterxml.jackson.module.kotlin.*
 import mu.KLogging
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
@@ -18,10 +19,11 @@ class GeolocationController {
     @RequestMapping("/geolocate", produces = ["application/json"])
     fun handleRequest(@RequestParam ip: String): ResponseEntity<String> {
         try {
-           val ipLocation = geolocator.geolocate(ip).toString()
-           return ResponseEntity<String>(ipLocation, HttpStatus.OK)
+            val ipLocation = geolocator.geolocate(ip)
+            val mapper = jacksonObjectMapper()
+            return ResponseEntity(mapper.writeValueAsString(ipLocation), HttpStatus.OK)
         } catch (e: InvalidIpLocationException) {
-            return ResponseEntity<String>("", HttpStatus.BAD_REQUEST)
+            return ResponseEntity("", HttpStatus.BAD_REQUEST)
         }
     }
 }
