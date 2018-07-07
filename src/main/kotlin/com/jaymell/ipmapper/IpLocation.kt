@@ -8,10 +8,7 @@ data class IpLocation(
     val ip: InetAddress,
     val latitude: Double?,
     val longitude: Double?,
-    val countryCode: String?,
+    val country_iso: String?,
     val city: String?,
-    val country: String?) {
-
-//    override fun toString(): String = "ip: $ip, latitude: $latitude, longitude: $longitude, countryCode: $countryCode, city: $city, country: $country"
-}
+    val country: String?)
 

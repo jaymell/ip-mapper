@@ -4,6 +4,7 @@ const geo = require('d3-geo');
 const scale = require('d3-scale');
 const dc = require('dc');
 const queue = require('d3-queue');
+const time = require('d3-time');
 const crossfilter = require('crossfilter');
 const http = require('http');
 const jsonlines = require('jsonlines');
@@ -98,10 +99,13 @@ function geolocate(ip) {
   const ipLocateRoute = "/geolocate";
   return new Promise((res, rej) => {
     http.get(ipLocateRoute + "?ip=" + ip, resp => {
-      var result;
-      resp.on('data', d => result = d);
+      var body = '';
+      resp.on('data', d => body += d);
       resp.on('error', e => rej(e));
-      resp.on('end', () => res(result));
+      resp.on('end', () => {
+        console.log('body: ', body);
+        return res(JSON.parse(body))
+      });
     })
   })
 }
@@ -114,61 +118,23 @@ function makeCharts(json, worldJson) {
   console.log('got this json: ', json);
   charts.ndx = crossfilter(json);
 
-  charts.allDim = charts.ndx.dimension(function(d) {
-    return d;
-  })
-
-  charts.ipDim = charts.ndx.dimension(function(d) {
-    if (exists(d, "ip")) {
-      return d["ip"];
-    }
-  });
-
-  charts.dateDim = charts.ndx.dimension(function(d) {
-    if (exists(d, "date")) {
-      return d['date'];
-    }
-  });
+  charts.allDim = charts.ndx.dimension(d => d);
+  charts.ipDim = charts.ndx.dimension(d => exists(d, "ip") ? d["ip"] : undefined);
+  charts.dateDim = charts.ndx.dimension(d => exists(d, "date") ? d['date'] : undefined);
 
   charts.getMinDate = function() { return charts.dateDim.bottom(1)[0]["date"]; }
   charts.getMaxDate = function() { return charts.dateDim.top(1)[0]["date"]; }
 
-  charts.countryCodeDim = charts.ndx.dimension(function(d) {
-    if (exists(d,"country_iso")) {
-      return d["country_iso"];
-    }
-  });
-
+  charts.countryCodeDim = charts.ndx.dimension(d => exists(d,"country_iso") ? d["country_iso"] : undefined);
   charts.hitsByCountryCode = charts.countryCodeDim.group();
 
-  charts.countryNameDim = charts.ndx.dimension(function(d) {
-    if (exists(d,"country")) {
-      return d["country"];
-    }
-  })
+  charts.countryNameDim = charts.ndx.dimension(d => exists(d,"country") ? d["country"] : undefined);
   charts.hitsByCountryName = charts.countryNameDim.group();
+  charts.hitsByDate = charts.dateDim.group(d => d3.timeHour(d));
 
-  charts.hitsByDate = charts.dateDim.group(function(d) {
-    return d3.time.hour(d);
-  });
-
-  charts.urlDim = charts.ndx.dimension(function(d) {
-    if (exists(d, "url")) {
-      return d["url"];
-    }
-  });
-
-  charts.hostDim = charts.ndx.dimension(function(d) {
-    if (exists(d, "host")) {
-      return d["host"];
-    }
-  });
-
-  charts.useragentDim = charts.ndx.dimension(function(d) {
-    if(exists(d, "user-agent")) {
-      return d["user-agent"];
-    }
-  });
+  charts.urlDim = charts.ndx.dimension(d => exists(d, "url") ? d["url"] : undefined);
+  charts.hostDim = charts.ndx.dimension(d => exists(d, "host") ? d["host"] : undefined);
+  charts.useragentDim = charts.ndx.dimension(d => exists(d, "user-agent") ? d["user-agent"] : undefined);
 
   // chart objects
   var worldChartDiv = "#world-chart";
@@ -270,11 +236,11 @@ function makeCharts(json, worldJson) {
     .transitionDuration(100)
     .elasticX(true)
     .elasticY(true)
-    .x(d3.time.scale().domain([charts.getMinDate(), charts.getMaxDate()]))
+    .x(d3.scaleTime().domain([charts.getMinDate(), charts.getMaxDate()]))
     // .gap(1);
 
   charts.timeChart.yAxis().ticks(5);
-  charts.timeChart.xUnits(d3.time.days);  // this prevents skinny "1-second" bars
+  charts.timeChart.xUnits(d3.timeDays);  // this prevents skinny "1-second" bars
 
   charts.pieChart
     .height(300)
@@ -363,7 +329,7 @@ function makeCharts(json, worldJson) {
 
 async function main() {
   jsTimer.begin();
-  const logs = await getLogs("/json?gte=1527548400000");
+  const logs = await getLogs("/json?gte=1527540735000");
   const json = cleanup(logs);
   global_json = json;
   const geolocated = await Promise.all(json.map(async(it) => _.assign({}, it, await geolocate(it.ip))));
@@ -373,11 +339,18 @@ async function main() {
   makeCharts(geolocated, geoJson);
 }
 
+function reset() {
+  dc.filterAll();
+  dc.renderAll();
+}
+
 main();
+window.reset = reset;
 
 module.exports = {
     cleanup: cleanup,
     cleanIp: cleanIp,
     exists: exists,
-    existsArr: existsArr
+    existsArr: existsArr,
+    reset: reset
 };
