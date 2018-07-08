@@ -1,10 +1,17 @@
 package com.jaymell.ipmapper
 
 import com.maxmind.geoip2.WebServiceClient
+import mu.KLogging
+import org.springframework.beans.factory.annotation.Autowired
 import java.net.InetAddress
 
 
 class MaxmindGeolocator(val maxmindAccountId: Int, val maxmindKey: String) : Geolocator {
+
+    companion object : KLogging()
+
+    @Autowired
+    override lateinit var cache: IpLocationCache
 
     val client = WebServiceClient.Builder(maxmindAccountId, maxmindKey).build()
 
@@ -14,8 +21,26 @@ class MaxmindGeolocator(val maxmindAccountId: Int, val maxmindKey: String) : Geo
             if (!org.apache.commons.validator.routines.InetAddressValidator().isValid(ip)) {
                 throw InvalidIpLocationException("invalid ip address")
             }
+
+            var cachedIpLocation: IpLocation?
+            try {
+                cachedIpLocation = cache.get(ip)
+            } catch (e: Exception) {
+                logger.error("Failed to query cache")
+                throw e
+            }
+
+            if (cachedIpLocation != null) return cachedIpLocation
+            // else query maxmind:
             val resp = client.insights(ipAddress)
-            return resp.toIpLocation(ipAddress)
+            val respIpLocation = resp.toIpLocation(ip)
+            try {
+                cache.put(respIpLocation)
+            } catch (e: Exception) {
+                logger.error("Unable to insert record into cache")
+                throw e
+            }
+            return respIpLocation
         } catch (e: java.net.UnknownHostException) {
             throw InvalidIpLocationException("invalid ip address")
         }
