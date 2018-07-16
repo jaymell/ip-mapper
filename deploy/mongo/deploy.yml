@@ -1,0 +1,30 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: mongo-deployment
+spec:
+  replicas: 1 # this should always be 1
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+      - name: mongo-container
+        image: mongo
+        args: ["--dbpath", "/data/db"]
+        ports:
+        - name: mongo
+          containerPort: 27017
+          # hostPort: 27017
+        volumeMounts:
+        - name: mongo-cluster-2a
+          mountPath: /data
+        resources:
+          requests:
+            cpu: "50m"
+      volumes:
+      - name: mongo-cluster-2a
+        awsElasticBlockStore:
+          volumeID: vol-077ba89c874b70b05
+          fsType: ext4
