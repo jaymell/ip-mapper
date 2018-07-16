@@ -1,0 +1,29 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: weblogger-deployment
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: weblogger
+    spec:
+      containers:
+      - name: weblogger-container
+        image: jaymell/nodeskel:latest
+        args: []
+        ports:
+        - name: http
+          containerPort: 80
+        resources:
+          requests:
+            cpu: "100m"
+        env:
+        - name: PORT
+          value: "80"
+        - name: MONGO_URL
+          value: "mongodb://mongo-service:27017/logger"
+        - name: COLLECTION
+          value: logs
+

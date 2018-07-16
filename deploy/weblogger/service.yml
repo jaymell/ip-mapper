@@ -1,0 +1,10 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: weblogger-service
+spec:
+  selector:
+    app: weblogger
+  ports:
+  - protocol: TCP
+    port: 80
