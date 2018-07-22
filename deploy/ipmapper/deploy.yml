@@ -20,7 +20,13 @@ spec:
         - name: MONGO_URL
           value: "mongodb://mongo-service:27017/logger"
         - name: MAXMIND_KEY
-          value: "12345"
+          valueFrom:
+            secretKeyRef:
+              name: ipmapper-secrets
+              key: maxMindKey
         - name: MAXMIND_ACCOUNT_ID
-          value: "12345"
+          valueFrom:
+            secretKeyRef:
+              name: ipmapper-secrets
+              key: maxMindAccount
 
