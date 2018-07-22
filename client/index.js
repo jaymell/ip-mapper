@@ -102,10 +102,7 @@ function geolocate(ip) {
       var body = '';
       resp.on('data', d => body += d);
       resp.on('error', e => rej(e));
-      resp.on('end', () => {
-        console.log('body: ', body);
-        return res(JSON.parse(body))
-      });
+      resp.on('end', () => res(JSON.parse(body)));
     })
   })
 }
@@ -329,13 +326,29 @@ function makeCharts(json, worldJson) {
 
 async function main() {
   jsTimer.begin();
-  const logs = await getLogs("/json?gte=1527540735000");
-  const json = cleanup(logs);
-  global_json = json;
-  const geolocated = await Promise.all(json.map(async(it) => _.assign({}, it, await geolocate(it.ip))));
+  const _d = new Date();
+  const d = new Date().setMonth(_d.getMonth() - 3);
+  const json = cleanup(await getLogs(`/json?gte=${d}`));
+  // // global_json = json;
+  const cache = {};
+  const geolocated = await Promise.map(json, (async(it) => {
+      try {
+        if ( it.ip in cache ) {
+          return _.assign(it, cache[it.ip]);
+        }
+        const geolocated = await geolocate(it.ip);
+        cache[it.ip] = geolocated;
+        return _.assign(it, geolocated);
+      } catch (e) {
+        console.error(`Failed geolocation for ${it.ip}`, e);
+        return it;
+      }
+  }), { concurrency: 5 });
+  delete cache;
   console.log('geolocated: ', geolocated);
-  global_geolocated = geolocated;
-  // console.log('geojson: ', geoJson);
+  // global_geolocated = geolocated;
+  console.log('geojson: ', geoJson);
+  // delete json;
   makeCharts(geolocated, geoJson);
 }
 

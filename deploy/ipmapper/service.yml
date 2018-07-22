@@ -1,0 +1,10 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: ipmapper-service
+spec:
+  selector:
+    app: ipmapper
+  ports:
+  - protocol: TCP
+    port: 8080

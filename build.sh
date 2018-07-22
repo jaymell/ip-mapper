@@ -1,6 +1,7 @@
 #!/bin/bash -xe
 
-TAG=$1
+[[ -z "$1" ]] && echo "Pass a tag" &&  exit 1
+TAG="$1"
 
 ./gradlew build
 
@@ -9,4 +10,4 @@ pushd client && \
   npm run build
 popd
 
-docker build -t ipmapper:$TAG .
+docker build -t $TAG .

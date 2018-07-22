@@ -1,0 +1,26 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: ipmapper-deployment
+spec:
+  replicas: 1 # this should always be 1
+  template:
+    metadata:
+      labels:
+        app: ipmapper
+    spec:
+      containers:
+      - name: ipmapper-container
+        image: jaymell/ipmapper:latest
+        #args: []
+        ports:
+        - name: http
+          containerPort: 8080
+        env:
+        - name: MONGO_URL
+          value: "mongodb://mongo-service:27017/logger"
+        - name: MAXMIND_KEY
+          value: "12345"
+        - name: MAXMIND_ACCOUNT_ID
+          value: "12345"
+

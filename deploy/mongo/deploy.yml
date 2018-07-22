@@ -19,7 +19,7 @@ spec:
           # hostPort: 27017
         volumeMounts:
         - name: mongo-cluster-2a
-          mountPath: /data
+          mountPath: /data/db
         resources:
           requests:
             cpu: "50m"
