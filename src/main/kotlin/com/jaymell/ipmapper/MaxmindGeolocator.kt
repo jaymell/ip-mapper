@@ -21,26 +21,23 @@ class MaxmindGeolocator(val maxmindAccountId: Int, val maxmindKey: String) : Geo
             if (!org.apache.commons.validator.routines.InetAddressValidator().isValid(ip)) {
                 throw InvalidIpLocationException("invalid ip address")
             }
-
-            var cachedIpLocation: IpLocation?
             try {
-                cachedIpLocation = cache.get(ip)
+                val cachedIpLocation = cache.get(ip)
+                if (cachedIpLocation != null) return cachedIpLocation
+                // else query maxmind:
+                val resp = client.insights(ipAddress)
+                val respIpLocation = resp.toIpLocation(ip)
+                try {
+                    cache.put(respIpLocation)
+                } catch (e: Exception) {
+                    logger.error("Unable to insert record into cache")
+                    throw e
+                }
+                return respIpLocation
             } catch (e: Exception) {
                 logger.error("Failed to query cache")
                 throw e
             }
-
-            if (cachedIpLocation != null) return cachedIpLocation
-            // else query maxmind:
-            val resp = client.insights(ipAddress)
-            val respIpLocation = resp.toIpLocation(ip)
-            try {
-                cache.put(respIpLocation)
-            } catch (e: Exception) {
-                logger.error("Unable to insert record into cache")
-                throw e
-            }
-            return respIpLocation
         } catch (e: java.net.UnknownHostException) {
             throw InvalidIpLocationException("invalid ip address")
         }
