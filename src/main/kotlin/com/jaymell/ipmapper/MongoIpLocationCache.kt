@@ -3,6 +3,7 @@ package com.jaymell.ipmapper
 import mu.KLogging
 import org.bson.Document
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.findOne
 import org.springframework.data.mongodb.core.query.Criteria
@@ -21,6 +22,7 @@ class MongoIpLocationCache : IpLocationCache {
     companion object : KLogging()
 
     @Autowired
+    @Qualifier("cacheTemplate")
     lateinit var template: MongoTemplate
 
     override fun put(ipLocation: IpLocation) {

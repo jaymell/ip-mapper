@@ -1,5 +1,7 @@
 package com.jaymell.ipmapper
 
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.PostMapping
@@ -8,7 +10,9 @@ import org.springframework.web.bind.annotation.RequestMapping
 
 @Controller
 @RequestMapping("/users")
-class UserController(val userRepository: UserRepository, val bCryptPasswordEncoder: BCryptPasswordEncoder) {
+class UserController(
+        val userRepository: UserRepository,
+        val bCryptPasswordEncoder: BCryptPasswordEncoder) {
 
     @PostMapping("/create")
     fun create(@RequestBody user: User) {

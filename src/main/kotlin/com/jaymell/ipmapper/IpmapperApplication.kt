@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 
 @Configuration
 class AppConfig {
@@ -24,19 +25,33 @@ class AppConfig {
 
     @Bean
     fun cache(): MongoIpLocationCache = MongoIpLocationCache()
+
+    @Bean
+    fun bCryptPasswordEncoder() = BCryptPasswordEncoder()
 }
 
 @Configuration
-@EnableMongoRepositories(basePackages = ["com.jaymell.ipmapper"])
 class MongoConfig {
 
     @Autowired
     lateinit var mongo: MongoClient
 
-    @Bean
-    @Qualifier("cache")
+    @Bean(name=["cacheTemplate"])
     fun mongoTemplate(): MongoTemplate {
         return MongoTemplate(mongo, "cache")
+    }
+}
+
+@Configuration
+@EnableMongoRepositories(basePackages = ["com.jaymell.ipmapper"])
+class MongoRepoConfig {
+
+    @Autowired
+    lateinit var mongo: MongoClient
+
+    @Bean
+    fun mongoTemplate(): MongoTemplate {
+        return MongoTemplate(mongo, "user")
     }
 }
 

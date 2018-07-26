@@ -1,12 +1,16 @@
 package com.jaymell.ipmapper
 
+import com.mongodb.MongoClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import java.time.LocalDateTime
@@ -15,11 +19,24 @@ import java.time.ZoneOffset
 
 data class TestItem(val date: LocalDateTime, val testKey: String)
 
+@Configuration
+class MongoTestConfig {
+
+    @Autowired
+    lateinit var mongo: MongoClient
+
+    @Bean(name=["testTemplate"])
+    fun mongoTemplate(): MongoTemplate {
+        return MongoTemplate(mongo, "test")
+    }
+}
+
 @ExtendWith(SpringExtension::class)
 @SpringBootTest
 class TestMongoDateQuery {
 
     @Autowired
+    @Qualifier("testTemplate")
     private lateinit var template: MongoTemplate
 
     val colName = "test"
