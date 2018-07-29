@@ -9,3 +9,4 @@ data class IpLocation(
         val country_iso: String?,
         val city: String?,
         val country: String?)
+
