@@ -32,10 +32,4 @@ class WebSecurity(
         auth.userDetailsService(userDetailsService).passwordEncoder(bCryptPasswordEncoder)
     }
 
-    @Bean
-    fun corsConfigurationService(): CorsConfigurationSource {
-        val source = UrlBasedCorsConfigurationSource()
-        source.registerCorsConfiguration("/**", CorsConfiguration().applyPermitDefaultValues())
-        return source
-    }
 }

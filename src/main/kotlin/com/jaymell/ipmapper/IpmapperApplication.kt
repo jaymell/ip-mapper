@@ -11,6 +11,9 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.web.cors.CorsConfiguration
+import org.springframework.web.cors.CorsConfigurationSource
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 class AppConfig {
@@ -28,6 +31,13 @@ class AppConfig {
 
     @Bean
     fun bCryptPasswordEncoder() = BCryptPasswordEncoder()
+
+    @Bean
+    fun corsConfigurationService(): CorsConfigurationSource {
+        val source = UrlBasedCorsConfigurationSource()
+        source.registerCorsConfiguration("/**", CorsConfiguration().applyPermitDefaultValues())
+        return source
+    }
 }
 
 @Configuration
