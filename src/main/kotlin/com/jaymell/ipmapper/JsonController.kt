@@ -11,12 +11,9 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
 
 @Controller
-class JsonController {
+class JsonController @Autowired constructor(val mongo: MongoClient) {
 
     companion object : KLogging()
-
-    @Autowired
-    private lateinit var mongo: MongoClient
 
     val dbName = "logger"
     val colName = "logs"

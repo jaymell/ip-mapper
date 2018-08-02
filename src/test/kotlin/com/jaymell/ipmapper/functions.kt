@@ -19,26 +19,11 @@ import java.time.ZoneOffset
 
 data class TestItem(val date: LocalDateTime, val testKey: String)
 
-@Configuration
-class MongoTestConfig {
-
-    @Autowired
-    lateinit var mongo: MongoClient
-
-    @Bean(name=["testTemplate"])
-    fun mongoTemplate(): MongoTemplate {
-        return MongoTemplate(mongo, "test")
-    }
-}
-
 @ExtendWith(SpringExtension::class)
 @SpringBootTest
 class TestMongoDateQuery {
 
-    @Autowired
-    @Qualifier("testTemplate")
-    private lateinit var template: MongoTemplate
-
+    val template = MongoTemplate(MongoClient(), "test")
     val colName = "test"
 
     val now = LocalDateTime.now(ZoneOffset.UTC)
