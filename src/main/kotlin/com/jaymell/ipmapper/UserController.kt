@@ -15,16 +15,16 @@ import org.springframework.web.bind.annotation.RequestMapping
 @Controller
 @RequestMapping("/users")
 @ConditionalOnProperty("enableUserController")
-class UserController(
-        val userRepository: UserRepository,
+class UserController constructor(
+        @Autowired val userRepository: UserRepository,
         val bCryptPasswordEncoder: BCryptPasswordEncoder) {
 
     companion object : KLogging()
 
     @PostMapping("/create")
     fun create(@RequestBody user: User): ResponseEntity<HttpStatus> {
-        val u: User? = userRepository.findByName(user.name)
-        u.let {
+        val u = userRepository.findByName(user.name)
+        u?.let {
             logger.info("Duplicate user creation attempted")
             return ResponseEntity(HttpStatus.CONFLICT)
         }

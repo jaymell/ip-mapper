@@ -20,9 +20,72 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.io.IOException
 import com.mongodb.Mongo
+import org.mockito.BDDMockito.given
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.test.autoconfigure.data.mongo.AutoConfigureDataMongo
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.context.annotation.Import
+import org.springframework.context.annotation.Profile
+import org.springframework.data.mongodb.repository.MongoRepository
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.web.cors.CorsConfiguration
+import org.springframework.web.cors.CorsConfigurationSource
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
+
+@Configuration
+@Profile("test")
+class TestAppConfig {
+    @Value("\${maxmind.key}")
+    lateinit var maxmindKey: String
+
+    @Value("\${maxmind.accountId}")
+    lateinit var maxmindAccountId: String
+
+    @Bean
+    fun geolocator(): MaxmindGeolocator = MaxmindGeolocator(maxmindAccountId.toInt(), maxmindKey)
+
+    @Bean
+    fun cache(): MongoIpLocationCache = MongoIpLocationCache()
+
+    @Bean
+    fun bCryptPasswordEncoder() = BCryptPasswordEncoder()
+
+    @Bean
+    fun corsConfigurationService(): CorsConfigurationSource {
+        val source = UrlBasedCorsConfigurationSource()
+        source.registerCorsConfiguration("/**", CorsConfiguration().applyPermitDefaultValues())
+        return source
+    }
+}
+
+@Configuration
+@Profile("test")
+class TestMongoConfig {
+
+    @Autowired
+    lateinit var mongo: MongoClient
+
+    @Bean(name=["cacheTemplate"])
+    fun mongoTemplate(): MongoTemplate {
+        return MongoTemplate(mongo, "test")
+    }
+}
+
+@Configuration
+@Profile("test")
+@EnableMongoRepositories(basePackages = ["com.jaymell.ipmapper"])
+class TestMongoRepoConfig {
+
+    @Autowired
+    lateinit var mongo: MongoClient
+
+    @Bean
+    fun mongoTemplate(): MongoTemplate {
+        return MongoTemplate(mongo, "test")
+    }
+}
 
 @SpringBootTest(properties = ["enableUserController=false"])
 @ExtendWith(SpringExtension::class)
@@ -40,7 +103,6 @@ class TestUserControllerDoesntLoad {
                 .content("{ \"name\": \"test\", \"password\": \"password\" }"))
                 .andExpect(status().isNotFound)
     }
-
 }
 
 @SpringBootTest(properties = ["enableUserController=true"])
@@ -51,11 +113,28 @@ class TestUserControllerLoads {
     @Autowired
     lateinit var mvc: MockMvc
 
+    /*
     @MockBean
-    val template: MongoTemplate = MongoTemplate(MongoClient(), "test")
+    lateinit var userRepository: UserRepository
+
+    @MockBean
+    lateinit var ipLocationCacheRepository: IpLocationCacheRepository
+
+
+    @MockBean(name="cacheTemplate")
+    lateinit var cacheTemplate: MongoTemplate
+
+    @MockBean(name="mongoTemplate")
+    lateinit var mongoTemplate: MongoTemplate
+
+    @MockBean
+     */
+    val template = MongoTemplate(MongoClient(), "test")
 
     @Test
     fun should_return_200() {
+//        given(userRepository.findByName("test")).willReturn(User("james", "password"))
+//        given(userRepository.save(User("test", "password"))).willReturn(null)
         this.mvc.perform(post("/users/create")
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
