@@ -1,6 +1,5 @@
 package com.jaymell.ipmapper
 
-import com.jaymell.ipmapper.SecurityConstants
 import org.springframework.context.annotation.Bean
 import org.springframework.http.HttpMethod
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder
@@ -13,7 +12,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
+import com.jaymell.ipmapper.securityconstants.*
 
+// add filters to filter chain
 @EnableWebSecurity
 class WebSecurity(
         val userDetailsService: UserDetailsService,
@@ -21,7 +22,7 @@ class WebSecurity(
 
     override fun configure(http: HttpSecurity) {
         http.cors().and().csrf().disable().authorizeRequests()
-                .antMatchers(HttpMethod.POST, SecurityConstants.SIGN_UP_URL).permitAll()
+                .antMatchers(HttpMethod.POST, SIGN_UP_URL).permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .addFilter(JwtAuthorizationFilter(authenticationManager()))

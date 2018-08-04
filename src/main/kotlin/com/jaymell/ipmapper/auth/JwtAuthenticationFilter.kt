@@ -12,11 +12,13 @@ import java.util.*
 import javax.servlet.FilterChain
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
+import com.jaymell.ipmapper.securityconstants.*
 
 class JwtAuthenticationFilter(private val authManager: AuthenticationManager)
     : UsernamePasswordAuthenticationFilter() {
 
     override fun attemptAuthentication(request: HttpServletRequest?, response: HttpServletResponse?): Authentication {
+		println("this request: $request")
         try {
             val creds: User = ObjectMapper()
                     .readValue(request?.inputStream, User::class.java)
@@ -35,9 +37,9 @@ class JwtAuthenticationFilter(private val authManager: AuthenticationManager)
         val u: User = authResult?.principal as User
         val token = Jwts.builder()
                 .setSubject(u.name)
-                .setExpiration(Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME))
-                .signWith(SignatureAlgorithm.HS512, SecurityConstants.SECRET.toByteArray())
+                .setExpiration(Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .signWith(SignatureAlgorithm.HS512, SECRET.toByteArray())
                 .compact()
-        response?.addHeader(SecurityConstants.HEADER_STRING, SecurityConstants.TOKEN_PREFIX + token)
+        response?.addHeader(HEADER_STRING, TOKEN_PREFIX + token)
     }
 }
