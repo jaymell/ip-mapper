@@ -1,11 +1,22 @@
-package com.jaymell.ipmapper.securityconstants
+package com.jaymell.ipmapper
 
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.stereotype.Component
 
-@Value("\${JWT_KEY}")
-lateinit var SECRET: String
+@Component
+class SecurityConstants {
+    companion object {
+        @JvmField
+        var SECRET: String = "default"
 
-val EXPIRATION_TIME: Long = 864000000 // 10 days
-val TOKEN_PREFIX = "Bearer "
-val HEADER_STRING = "Authorization"
-val SIGN_UP_URL = "/users/create"
+        val EXPIRATION_TIME: Long = 864000000 // 10 days
+        val TOKEN_PREFIX = "Bearer "
+        val HEADER_STRING = "Authorization"
+        val SIGN_UP_URL = "/users/create"
+    }
+
+    @Value("\${jwt.key}")
+    fun setSECRET(secret: String) {
+        SECRET = secret
+    }
+}

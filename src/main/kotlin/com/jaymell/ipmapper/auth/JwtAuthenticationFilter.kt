@@ -13,7 +13,6 @@ import java.util.*
 import javax.servlet.FilterChain
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
-import com.jaymell.ipmapper.securityconstants.*
 import mu.KLogging
 
 class JwtAuthenticationFilter(val authManager: AuthenticationManager)
@@ -26,13 +25,7 @@ class JwtAuthenticationFilter(val authManager: AuthenticationManager)
             val mapper = jacksonObjectMapper()
             val creds: User = mapper
                     .readValue(request?.inputStream?.bufferedReader().use { it?.readText()}!!)
-            logger.debug("Creds: ${creds}")
-            logger.debug("Creds name: ${creds.name}")
-            logger.debug("Creds pass: ${creds.password}")
-            // this is null:
-            if (authManager == null) {
-                logger.debug("THIS IS NULL")
-            }
+
             return authManager.authenticate(
                     UsernamePasswordAuthenticationToken(creds.name, creds.password, ArrayList())
             )
@@ -49,9 +42,10 @@ class JwtAuthenticationFilter(val authManager: AuthenticationManager)
         val u = authResult?.principal as org.springframework.security.core.userdetails.User
         val token = Jwts.builder()
                 .setSubject(u.username)
-                .setExpiration(Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .signWith(SignatureAlgorithm.HS512, SECRET.toByteArray())
+                .setExpiration(Date(System.currentTimeMillis() + SecurityConstants.EXPIRATION_TIME))
+                .signWith(SignatureAlgorithm.HS512, SecurityConstants.SECRET.toByteArray())
                 .compact()
-        response?.addHeader(HEADER_STRING, TOKEN_PREFIX + token)
+        response?.addHeader(SecurityConstants.HEADER_STRING, SecurityConstants.TOKEN_PREFIX + token)
     }
 }
+
