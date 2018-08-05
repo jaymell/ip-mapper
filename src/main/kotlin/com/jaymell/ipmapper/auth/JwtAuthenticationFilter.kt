@@ -16,7 +16,7 @@ import javax.servlet.http.HttpServletResponse
 import com.jaymell.ipmapper.securityconstants.*
 import mu.KLogging
 
-class JwtAuthenticationFilter(private val authManager: AuthenticationManager)
+class JwtAuthenticationFilter(val authManager: AuthenticationManager)
     : UsernamePasswordAuthenticationFilter() {
 
     companion object : KLogging()
@@ -30,7 +30,10 @@ class JwtAuthenticationFilter(private val authManager: AuthenticationManager)
             logger.debug("Creds name: ${creds.name}")
             logger.debug("Creds pass: ${creds.password}")
             // this is null:
-            return authenticationManager.authenticate(
+            if (authManager == null) {
+                logger.debug("THIS IS NULL")
+            }
+            return authManager.authenticate(
                     UsernamePasswordAuthenticationToken(creds.name, creds.password, ArrayList())
             )
         } catch (e: IOException) {
@@ -43,9 +46,9 @@ class JwtAuthenticationFilter(private val authManager: AuthenticationManager)
                                           response: HttpServletResponse?,
                                           chain: FilterChain?,
                                           authResult: Authentication?) {
-        val u: User = authResult?.principal as User
+        val u = authResult?.principal as org.springframework.security.core.userdetails.User
         val token = Jwts.builder()
-                .setSubject(u.name)
+                .setSubject(u.username)
                 .setExpiration(Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .signWith(SignatureAlgorithm.HS512, SECRET.toByteArray())
                 .compact()
