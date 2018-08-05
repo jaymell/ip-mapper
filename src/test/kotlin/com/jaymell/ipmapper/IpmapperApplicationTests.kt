@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.io.IOException
 import com.mongodb.Mongo
+import org.assertj.core.api.Assertions.assertThat
 import org.mockito.BDDMockito.given
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.autoconfigure.data.mongo.AutoConfigureDataMongo
@@ -67,7 +68,7 @@ class TestMongoConfig {
     @Autowired
     lateinit var mongo: MongoClient
 
-    @Bean(name=["cacheTemplate"])
+    @Bean(name = ["cacheTemplate"])
     fun mongoTemplate(): MongoTemplate {
         return MongoTemplate(mongo, "test")
     }
@@ -135,7 +136,7 @@ class TestUserControllerLoads {
     fun should_return_200() {
 //        given(userRepository.findByName("test")).willReturn(User("james", "password"))
 //        given(userRepository.save(User("test", "password"))).willReturn(null)
-        this.mvc.perform(post("/users/create")
+        mvc.perform(post("/users/create")
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{ \"name\": \"test\", \"password\": \"password\" }"))
@@ -145,5 +146,15 @@ class TestUserControllerLoads {
     @AfterAll
     fun cleanup() {
         template.dropCollection("user")
+    }
+}
+
+@SpringBootTest
+@ExtendWith(SpringExtension::class)
+class TestAuth {
+
+    @Test
+    fun security_constants_should_not_have_default_value_set() {
+        assertThat(SecurityConstants.SECRET).isNotEqualTo(SecurityConstants.defaultSecret)
     }
 }

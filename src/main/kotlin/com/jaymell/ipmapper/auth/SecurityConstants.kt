@@ -6,8 +6,10 @@ import org.springframework.stereotype.Component
 @Component
 class SecurityConstants {
     companion object {
+        val defaultSecret = "defaultKey"
+
         @JvmField
-        var SECRET: String = "default"
+        var SECRET: String = defaultSecret
 
         val EXPIRATION_TIME: Long = 864000000 // 10 days
         val TOKEN_PREFIX = "Bearer "
