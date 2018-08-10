@@ -13,7 +13,7 @@ class JwtAuthorizationFilter(authManager: AuthenticationManager) : BasicAuthenti
 
     override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, chain: FilterChain) {
         val header = request.getHeader(SecurityConstants.HEADER_STRING)
-        if (header != null && ! header.startsWith(SecurityConstants.TOKEN_PREFIX)) {
+        if (header != null && header.startsWith(SecurityConstants.TOKEN_PREFIX)) {
             val authentication = getAuthentication(request)
             authentication?.let {
                 SecurityContextHolder.getContext().authentication = it
