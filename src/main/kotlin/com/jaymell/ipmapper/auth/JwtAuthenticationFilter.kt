@@ -24,7 +24,7 @@ class JwtAuthenticationFilter(val authManager: AuthenticationManager)
         try {
             val mapper = jacksonObjectMapper()
             val creds: User = mapper
-                    .readValue(request?.inputStream?.bufferedReader().use { it?.readText()}!!)
+                    .readValue(request?.inputStream?.bufferedReader().use { it?.readText()!! } )
 
             return authManager.authenticate(
                     UsernamePasswordAuthenticationToken(creds.name, creds.password, ArrayList())
