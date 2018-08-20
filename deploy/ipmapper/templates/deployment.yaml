@@ -36,6 +36,13 @@ spec:
               secretKeyRef:
                 name: ipmapper-secrets
                 key: maxMindAccount
+          - name: JWT_KEY
+            valueFrom:
+              secretKeyRef:
+                name: ipmapper-secrets
+                key: jwtKey
+          - name: ENABLE_USER_CONTROLLER
+            value: "false"
           ports:
             - name: http
               containerPort: 8080
