@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ipmapper-admin
+  labels:
+    app: ipmapper-admin
+    chart: {{ include "ipmapper.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  type: {{ .Values.admin.type }}
+  ports:
+    - port: {{ .Values.admin.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: ipmapper-admin
+    release: {{ .Release.Name }}

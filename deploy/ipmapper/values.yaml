@@ -16,6 +16,11 @@ service:
   type: ClusterIP
   port: 8080
 
+admin:
+  type: ClusterIP
+  port: 8081
+  replicaCount: 1
+
 ingress:
   enabled: true
   annotations:
