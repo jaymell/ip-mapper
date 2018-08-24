@@ -1,9 +1,9 @@
 apiVersion: apps/v1beta2
 kind: Deployment
 metadata:
-  name: {{ include "ipmapper.fullname" . }}
+  name: ipmapper-admin
   labels:
-    app: {{ include "ipmapper.name" . }}
+    app: ipmapper-admin
     chart: {{ include "ipmapper.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
@@ -16,7 +16,7 @@ spec:
   template:
     metadata:
       labels:
-        app: {{ include "ipmapper.name" . }}
+        app: ipmapper-admin
         release: {{ .Release.Name }}
     spec:
       containers:
@@ -42,30 +42,23 @@ spec:
                 name: ipmapper-secrets
                 key: jwtKey
           - name: ENABLE_USER_CONTROLLER
-            value: "false"
+            value: "true"
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: {{ .Values.admin.port }}
+              protocol: TCP
+            - name: management
+              containerPort: {{ .Values.managementPort }}
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /
-              port: http
+              path: /actuator/health
+              port: {{ .Values.managementPort }}
           readinessProbe:
             httpGet:
-              path: /
-              port: http
+              path: /actuator/health
+              port: {{ .Values.managementPort }}
           resources:
-{{ toYaml .Values.resources | indent 12 }}
+{{ toYaml .Values.admin.resources | indent 12 }}
     {{- with .Values.nodeSelector }}
-      nodeSelector:
-{{ toYaml . | indent 8 }}
-    {{- end }}
-    {{- with .Values.affinity }}
-      affinity:
-{{ toYaml . | indent 8 }}
-    {{- end }}
-    {{- with .Values.tolerations }}
-      tolerations:
-{{ toYaml . | indent 8 }}
-    {{- end }}
+      {{- end }}

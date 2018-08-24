@@ -45,16 +45,19 @@ spec:
             value: "false"
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+            - name: management
+              containerPort: {{ .Values.managementPort }}
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /
-              port: http
+              path: /actuator/health
+              port: {{ .Values.managementPort }}
           readinessProbe:
             httpGet:
-              path: /
-              port: http
+              path: /actuator/health
+              port: {{ .Values.managementPort }}
           resources:
 {{ toYaml .Values.resources | indent 12 }}
     {{- with .Values.nodeSelector }}
